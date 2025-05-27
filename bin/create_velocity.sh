@@ -1,15 +1,29 @@
 #!/bin/bash
 source "$(dirname "$0")/../config/global.conf"
 
-# Ensure required packages are installed
-apt update && apt install -y openjdk-21-jre-headless curl jq unzip yq mcrcon
+# Systempakete
+apt update && apt install -y openjdk-21-jre-headless curl jq unzip yq git build-essential
+
+# MCRCON manuell bauen
+if ! command -v mcrcon &> /dev/null; then
+  echo "➡️  Installing mcrcon from source..."
+  TMP_DIR=$(mktemp -d)
+  git clone https://github.com/Tiiffi/mcrcon.git "$TMP_DIR/mcrcon"
+  cd "$TMP_DIR/mcrcon" || exit 1
+  make
+  cp mcrcon /usr/local/bin/
+  cd -
+  rm -rf "$TMP_DIR"
+else
+  echo "✅ mcrcon is already installed."
+fi
 
 read -p "Instance name (e.g. velocity-hub): " NAME
 TARGET_DIR="$BASE_DIR/$NAME"
 mkdir -p "$TARGET_DIR"
 cd "$TARGET_DIR"
 
-# Download Velocity
+# Velocity herunterladen
 VERSION=$(curl -s https://api.papermc.io/v2/projects/velocity | jq -r '.versions[-1]')
 BUILD=$(curl -s "https://api.papermc.io/v2/projects/velocity/versions/$VERSION" | jq -r '.builds[-1]')
 JAR="velocity-${VERSION}-${BUILD}.jar"
@@ -21,14 +35,14 @@ if [[ ! -f velocity.jar ]]; then
   exit 1
 fi
 
-# Create start script
+# Start-Skript
 cat << EOF > start_$NAME.sh
 #!/bin/bash
 java -Xms$DEFAULT_MIN_RAM -Xmx$DEFAULT_MAX_RAM -jar velocity.jar
 EOF
 chmod +x start_$NAME.sh
 
-# Create update script
+# Update-Skript
 cat << EOF > update_$NAME.sh
 #!/bin/bash
 cd "\$(dirname "\$0")"
@@ -39,10 +53,9 @@ curl -Lo velocity.jar "https://api.papermc.io/v2/projects/velocity/versions/\$VE
 EOF
 chmod +x update_$NAME.sh
 
-# Run once to generate velocity.toml
+# Initialstart für velocity.toml
 java -jar velocity.jar || true
 
-# Modify velocity.toml automatically
 TOML_FILE="$TARGET_DIR/velocity.toml"
 if [[ -f "$TOML_FILE" ]]; then
   echo "Modifying velocity.toml..."
@@ -55,21 +68,21 @@ if [[ -f "$TOML_FILE" ]]; then
   if [[ -n "$SECRET" ]]; then
     echo "🔐 $SECRET"
   else
-    echo "[ERROR] Could not find forwarding-secret in $TOML_FILE"
+    echo "[WARNING] Could not find forwarding-secret in $TOML_FILE"
   fi
   echo ""
 else
   echo "[ERROR] velocity.toml not found after startup"
 fi
 
-# Ensure rcon_targets.list exists
+# RCON-Liste sicherstellen
 touch "$BASE_DIR/rcon_targets.list"
 
-# Copy rcon_monitor.sh for central RCON control
+# RCON-Skript bereitstellen
 cp "$(dirname "$0")/rcon_monitor.sh" "$BASE_DIR/rcon_monitor.sh"
 chmod +x "$BASE_DIR/rcon_monitor.sh"
 
-# Create systemd service
+# systemd-Service
 cat << EOF > "/etc/systemd/system/$NAME.service"
 [Unit]
 Description=Velocity Proxy Server ($NAME)
