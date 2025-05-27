@@ -115,11 +115,14 @@ fi
 
 # === RCON-Monitoring ===
 touch "$BASE_DIR/rcon_targets.list"
-if [[ -f "$BIN_DIR/rcon_monitor.sh" ]]; then
-  cp "$BIN_DIR/rcon_monitor.sh" "$BASE_DIR/rcon_monitor.sh"
+if [[ -f "$SCRIPT_DIR/rcon_monitor.sh" ]]; then
+  cp "$SCRIPT_DIR/rcon_monitor.sh" "$BASE_DIR/rcon_monitor.sh"
+  chmod +x "$BASE_DIR/rcon_monitor.sh"
+elif [[ -f "$SCRIPT_DIR/bin/rcon_monitor.sh" ]]; then
+  cp "$SCRIPT_DIR/bin/rcon_monitor.sh" "$BASE_DIR/rcon_monitor.sh"
   chmod +x "$BASE_DIR/rcon_monitor.sh"
 else
-  echo "[WARNING] rcon_monitor.sh not found in $BIN_DIR. Skipped copying."
+  echo "[WARNING] rcon_monitor.sh not found in $SCRIPT_DIR or ./bin/. Skipped copying."
 fi
 
 # === systemd-Service ===
