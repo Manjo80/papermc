@@ -2,6 +2,7 @@
 SCRIPT_DIR="$(dirname "$0")"
 BASE_DIR="/opt/minecraft"
 CONFIG_FILE="$SCRIPT_DIR/../config/global.conf"
+BIN_DIR="$SCRIPT_DIR/../bin"
 
 # === Konfiguration laden oder Defaults setzen ===
 if [[ -f "$CONFIG_FILE" ]]; then
@@ -80,15 +81,22 @@ if [[ -f "$TOML_FILE" ]]; then
   sed -i 's/^online-mode = true/online-mode = false/' "$TOML_FILE"
   sed -i "s/^motd = .*/motd = \"$NAME\"/" "$TOML_FILE"
 
-  # Blöcke [servers] und [forced-hosts] entfernen
+  # [servers] und [forced-hosts] leeren, aber erhalten
   awk '
-    BEGIN {skip=0}
-    /^\[servers\]/ {skip=1; next}
-    /^\[forced-hosts\]/ {skip=2; next}
-    /^\[/ {
-      if (skip == 1 || skip == 2) {skip=0}
+    /^\[servers\]/ {
+      print "[servers]"
+      skip=1
+      next
     }
-    skip==0 {print}
+    /^\[forced-hosts\]/ {
+      print "[forced-hosts]"
+      skip=1
+      next
+    }
+    /^\[/ {
+      skip=0
+    }
+    skip==0 { print }
   ' "$TOML_FILE" > "$TOML_FILE.tmp" && mv "$TOML_FILE.tmp" "$TOML_FILE"
 
   # forwarding.secret anzeigen
@@ -107,11 +115,11 @@ fi
 
 # === RCON-Monitoring ===
 touch "$BASE_DIR/rcon_targets.list"
-if [[ -f "$SCRIPT_DIR/../bin/rcon_monitor.sh" ]]; then
-  cp "$SCRIPT_DIR/../bin/rcon_monitor.sh" "$BASE_DIR/rcon_monitor.sh"
+if [[ -f "$BIN_DIR/rcon_monitor.sh" ]]; then
+  cp "$BIN_DIR/rcon_monitor.sh" "$BASE_DIR/rcon_monitor.sh"
   chmod +x "$BASE_DIR/rcon_monitor.sh"
 else
-  echo "[WARNING] rcon_monitor.sh not found in ../bin/. Skipped copying."
+  echo "[WARNING] rcon_monitor.sh not found in $BIN_DIR. Skipped copying."
 fi
 
 # === systemd-Service ===
