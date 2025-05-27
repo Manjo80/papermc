@@ -1,5 +1,5 @@
 #!/bin/bash
-SCRIPT_DIR="$(dirname "$0")"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BASE_DIR="/opt/minecraft"
 CONFIG_FILE="$SCRIPT_DIR/../config/global.conf"
 BIN_DIR="$SCRIPT_DIR/bin"
@@ -122,9 +122,8 @@ elif [[ -f "$SCRIPT_DIR/bin/rcon_monitor.sh" ]]; then
   cp "$SCRIPT_DIR/bin/rcon_monitor.sh" "$BASE_DIR/rcon_monitor.sh"
   chmod +x "$BASE_DIR/rcon_monitor.sh"
 else
-  echo "[WARNING] rcon_monitor.sh not found in $SCRIPT_DIR or ./bin/. Skipped copying."
+  echo "[WARNING] rcon_monitor.sh not found in $SCRIPT_DIR or $SCRIPT_DIR/bin. Skipped copying."
 fi
-
 # === systemd-Service ===
 cat << EOF > "/etc/systemd/system/$NAME.service"
 [Unit]
