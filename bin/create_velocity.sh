@@ -12,7 +12,7 @@ if ! command -v mcrcon &> /dev/null; then
   cd "$TMP_DIR/mcrcon" || exit 1
   make
   cp mcrcon /usr/local/bin/
-  cd -
+  cd - >/dev/null
   rm -rf "$TMP_DIR"
 else
   echo "✅ mcrcon is already installed."
@@ -53,8 +53,13 @@ curl -Lo velocity.jar "https://api.papermc.io/v2/projects/velocity/versions/\$VE
 EOF
 chmod +x update_$NAME.sh
 
-# Initialstart für velocity.toml
-java -jar velocity.jar || true
+# Initialstart zur Generierung der config-Dateien
+echo "➡️  Running Velocity once to generate config files..."
+java -jar velocity.jar &
+VELOCITY_PID=$!
+sleep 5
+kill "$VELOCITY_PID"
+sleep 2
 
 TOML_FILE="$TARGET_DIR/velocity.toml"
 if [[ -f "$TOML_FILE" ]]; then
@@ -70,7 +75,6 @@ if [[ -f "$TOML_FILE" ]]; then
   else
     echo "[WARNING] Could not find forwarding-secret in $TOML_FILE"
   fi
-  echo ""
 else
   echo "[ERROR] velocity.toml not found after startup"
 fi
@@ -103,5 +107,8 @@ systemctl daemon-reload
 systemctl enable "$NAME"
 systemctl start "$NAME"
 
+echo ""
 echo "✅ Velocity proxy '$NAME' installed and running at $TARGET_DIR"
 echo "ℹ️  Use $BASE_DIR/rcon_monitor.sh to send RCON commands to Paper servers."
+
+read -p "Press ENTER to return to menu..."
