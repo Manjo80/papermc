@@ -1,8 +1,10 @@
 #!/bin/bash
-source "$(dirname "$0")/../config/global.conf"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+BASE_DIR="/opt/minecraft"
+source "$SCRIPT_DIR/../config/global.conf"
 
 # Abhängigkeiten installieren
-apt update && apt install -y openjdk-21-jre-headless curl jq unzip yq mcrcon
+apt update && apt install -y openjdk-21-jre-headless curl jq unzip yq
 
 # Einstellungen abfragen
 read -p "Server name (e.g. lobby): " NAME
@@ -29,7 +31,7 @@ if [[ "$IS_PROXY" =~ ^[Yy]$ ]]; then
   IS_VELOCITY=true
 fi
 
-# Verzeichnis erstellen
+# Zielverzeichnis
 mkdir -p "$TARGET_DIR"
 cd "$TARGET_DIR"
 
@@ -45,13 +47,14 @@ if [[ ! -f paper.jar ]]; then
   exit 1
 fi
 
-# Start- und Update-Skripte erstellen
+# Startskript
 cat << EOF > start_$NAME.sh
 #!/bin/bash
 java -Xms$DEFAULT_MIN_RAM -Xmx$DEFAULT_MAX_RAM -jar paper.jar nogui
 EOF
 chmod +x start_$NAME.sh
 
+# Update-Skript
 cat << EOF > update_$NAME.sh
 #!/bin/bash
 cd "\$(dirname "\$0")"
@@ -62,11 +65,24 @@ curl -Lo paper.jar "https://api.papermc.io/v2/projects/paper/versions/\$VERSION/
 EOF
 chmod +x update_$NAME.sh
 
-# Server initial starten
-java -jar paper.jar nogui || true
+# ➤ Initialstart: nur für Generierung von Konfigs
+echo "➡️  Running Paper once to generate config files..."
+java -jar paper.jar nogui &
+PAPER_PID=$!
+sleep 5
+kill "$PAPER_PID"
+sleep 2
+
+# EULA akzeptieren
 echo "eula=true" > eula.txt
 
-# server.properties schreiben
+# Warte auf Konfigdateien
+for i in {1..10}; do
+  [[ -f server.properties && -f spigot.yml && -f config/paper-global.yml ]] && break
+  sleep 1
+done
+
+# server.properties überschreiben
 cat << EOF > server.properties
 server-port=$SERVER_PORT
 motd=$DEFAULT_MOTD
@@ -90,15 +106,9 @@ rcon.port=$RCON_PORT
 rcon.password=$RCON_PASS
 EOF
 
-# Auf Konfigdateien warten (max 10 Sekunden)
-for i in {1..10}; do
-  [[ -f spigot.yml && -f config/paper-global.yml ]] && break
-  sleep 1
-done
-
 # Velocity-Integration konfigurieren
 if [[ "$IS_VELOCITY" == "true" ]]; then
-  echo "Aktiviere Velocity-Unterstützung..."
+  echo "➡️  Activating Velocity support..."
   yq eval '.settings.bungeecord = true' -i spigot.yml
   yq eval ".proxies.velocity.enabled = true | .proxies.velocity.online-mode = true | .proxies.velocity.secret = \"REPLACE_WITH_SECRET\"" -i config/paper-global.yml
 fi
@@ -120,13 +130,14 @@ User=root
 WantedBy=multi-user.target
 EOF
 
+# Server über systemd starten
 systemctl daemon-reload
 systemctl enable "paper-$NAME"
 systemctl start "paper-$NAME"
 
 # Zusammenfassung
 echo ""
-echo "✅ PaperMC server '$NAME' created and started."
+echo "✅ PaperMC server '$NAME' created and running."
 if [[ "$IS_VELOCITY" == "true" ]]; then
   echo ""
   echo "➡️  Add the following to your Velocity's velocity.toml:"
@@ -136,3 +147,5 @@ if [[ "$IS_VELOCITY" == "true" ]]; then
   echo ""
   echo "Remember to insert the Velocity secret into this server's config/paper-global.yml"
 fi
+
+read -p "Press ENTER to return to menu..."
