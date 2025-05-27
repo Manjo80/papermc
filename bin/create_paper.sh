@@ -1,15 +1,13 @@
 #!/bin/bash
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-BASE_DIR="/opt/minecraft"
-source "$SCRIPT_DIR/../config/global.conf"
+source "$(dirname "$0")/../config/global.conf"
 
 # Abhängigkeiten installieren
-apt update && apt install -y openjdk-21-jre-headless curl jq unzip yq
+apt update && apt install -y openjdk-21-jre-headless curl jq unzip
 
 # Einstellungen abfragen
 read -p "Server name (e.g. lobby): " NAME
 NAME=$(echo "$NAME" | tr '[:upper:]' '[:lower:]')
-TARGET_DIR="$BASE_DIR/paper-$NAME"
+TARGET_DIR="/opt/papermc/paper-$NAME"
 
 read -p "Server port [$DEFAULT_PAPER_PORT]: " SERVER_PORT
 SERVER_PORT=${SERVER_PORT:-$DEFAULT_PAPER_PORT}
@@ -31,7 +29,7 @@ if [[ "$IS_PROXY" =~ ^[Yy]$ ]]; then
   IS_VELOCITY=true
 fi
 
-# Zielverzeichnis
+# Verzeichnis erstellen
 mkdir -p "$TARGET_DIR"
 cd "$TARGET_DIR"
 
@@ -47,14 +45,13 @@ if [[ ! -f paper.jar ]]; then
   exit 1
 fi
 
-# Startskript
+# Start- und Update-Skripte erstellen
 cat << EOF > start_$NAME.sh
 #!/bin/bash
 java -Xms$DEFAULT_MIN_RAM -Xmx$DEFAULT_MAX_RAM -jar paper.jar nogui
 EOF
 chmod +x start_$NAME.sh
 
-# Update-Skript
 cat << EOF > update_$NAME.sh
 #!/bin/bash
 cd "\$(dirname "\$0")"
@@ -65,24 +62,11 @@ curl -Lo paper.jar "https://api.papermc.io/v2/projects/paper/versions/\$VERSION/
 EOF
 chmod +x update_$NAME.sh
 
-# ➤ Initialstart: nur für Generierung von Konfigs
-echo "➡️  Running Paper once to generate config files..."
-java -jar paper.jar nogui &
-PAPER_PID=$!
-sleep 5
-kill "$PAPER_PID"
-sleep 2
-
-# EULA akzeptieren
+# Server initial starten (nur damit Konfigs erstellt werden)
+java -jar paper.jar nogui || true
 echo "eula=true" > eula.txt
 
-# Warte auf Konfigdateien
-for i in {1..10}; do
-  [[ -f server.properties && -f spigot.yml && -f config/paper-global.yml ]] && break
-  sleep 1
-done
-
-# server.properties überschreiben
+# server.properties schreiben
 cat << EOF > server.properties
 server-port=$SERVER_PORT
 motd=$DEFAULT_MOTD
@@ -106,11 +90,28 @@ rcon.port=$RCON_PORT
 rcon.password=$RCON_PASS
 EOF
 
+# Auf Konfigdateien warten
+for i in {1..10}; do
+  [[ -f spigot.yml && -f config/paper-global.yml ]] && break
+  sleep 1
+done
+
+# Server nach dem Start stoppen
+pkill -f "paper.jar"
+
 # Velocity-Integration konfigurieren
 if [[ "$IS_VELOCITY" == "true" ]]; then
   echo "➡️  Activating Velocity support..."
-  yq eval '.settings.bungeecord = true' -i spigot.yml
-  yq eval ".proxies.velocity.enabled = true | .proxies.velocity.online-mode = true | .proxies.velocity.secret = \"REPLACE_WITH_SECRET\"" -i config/paper-global.yml
+  VELOCITY_SECRET_FILE="/opt/papermc/velocity/forwarding.secret"
+  if [[ -f "$VELOCITY_SECRET_FILE" ]]; then
+    VELOCITY_SECRET=$(cat "$VELOCITY_SECRET_FILE")
+    sed -i 's/^bungeecord: .*/bungeecord: true/' spigot.yml
+    sed -i "s/^  enabled: .*/  enabled: true/" config/paper-global.yml
+    sed -i "s/^  online-mode: .*/  online-mode: true/" config/paper-global.yml
+    sed -i "s/^  secret: .*/  secret: $VELOCITY_SECRET/" config/paper-global.yml
+  else
+    echo "[WARNING] Could not find Velocity secret file: $VELOCITY_SECRET_FILE"
+  fi
 fi
 
 # systemd-Dienst anlegen
@@ -130,7 +131,6 @@ User=root
 WantedBy=multi-user.target
 EOF
 
-# Server über systemd starten
 systemctl daemon-reload
 systemctl enable "paper-$NAME"
 systemctl start "paper-$NAME"
@@ -144,8 +144,7 @@ if [[ "$IS_VELOCITY" == "true" ]]; then
   echo "[$NAME]"
   echo "address = \"<IP-OF-THIS-SERVER>:$SERVER_PORT\""
   echo "try = [ \"$NAME\" ]"
-  echo ""
-  echo "Remember to insert the Velocity secret into this server's config/paper-global.yml"
 fi
 
-read -p "Press ENTER to return to menu..."
+echo ""
+read -p "✅ Press ENTER to return to menu..."
