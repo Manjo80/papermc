@@ -3,17 +3,17 @@ SCRIPT_DIR="$(dirname "$0")"
 BASE_DIR="/opt/minecraft"
 CONFIG_FILE="$SCRIPT_DIR/../config/global.conf"
 
-# === Konfiguration einbinden oder Defaults setzen ===
+# === Konfiguration laden oder Defaults setzen ===
 if [[ -f "$CONFIG_FILE" ]]; then
   source "$CONFIG_FILE"
 fi
 DEFAULT_MIN_RAM="${DEFAULT_MIN_RAM:-512M}"
 DEFAULT_MAX_RAM="${DEFAULT_MAX_RAM:-1G}"
 
-# === Pakete installieren ===
+# === Systempakete installieren ===
 apt update && apt install -y openjdk-21-jre-headless curl jq unzip yq git build-essential
 
-# === MCRCON installieren falls nicht vorhanden ===
+# === mcrcon installieren ===
 if ! command -v mcrcon &> /dev/null; then
   echo "➡️  Installing mcrcon from source..."
   TMP_DIR=$(mktemp -d)
@@ -27,7 +27,7 @@ else
   echo "✅ mcrcon is already installed."
 fi
 
-# === Servername abfragen ===
+# === Instanznamen abfragen ===
 read -p "Instance name (e.g. velocity-hub): " NAME
 TARGET_DIR="$BASE_DIR/$NAME"
 mkdir -p "$TARGET_DIR"
@@ -62,7 +62,7 @@ curl -Lo velocity.jar "https://api.papermc.io/v2/projects/velocity/versions/\$VE
 EOF
 chmod +x update_$NAME.sh
 
-# === Erststart zur Konfig-Erzeugung ===
+# === Initialstart für Konfiguration ===
 echo "➡️  Running Velocity once to generate config files..."
 java -jar velocity.jar &
 VELOCITY_PID=$!
@@ -73,11 +73,23 @@ sleep 2
 # === velocity.toml anpassen ===
 TOML_FILE="$TARGET_DIR/velocity.toml"
 if [[ -f "$TOML_FILE" ]]; then
-  read -p "Run behind Velocity? (y/n): " BEHIND
-  if [[ "$BEHIND" =~ ^[Yy]$ ]]; then
-    sed -i 's/^player-info-forwarding-mode = .*/player-info-forwarding-mode = "modern"/' "$TOML_FILE"
-    sed -i 's/^online-mode = true/online-mode = false/' "$TOML_FILE"
-  fi
+  echo "➡️  Modifying velocity.toml ..."
+
+  # Werte setzen
+  sed -i 's/^player-info-forwarding-mode = .*/player-info-forwarding-mode = "modern"/' "$TOML_FILE"
+  sed -i 's/^online-mode = true/online-mode = false/' "$TOML_FILE"
+  sed -i "s/^motd = .*/motd = \"$NAME\"/" "$TOML_FILE"
+
+  # Blöcke [servers] und [forced-hosts] entfernen
+  awk '
+    BEGIN {skip=0}
+    /^\[servers\]/ {skip=1; next}
+    /^\[forced-hosts\]/ {skip=2; next}
+    /^\[/ {
+      if (skip == 1 || skip == 2) {skip=0}
+    }
+    skip==0 {print}
+  ' "$TOML_FILE" > "$TOML_FILE.tmp" && mv "$TOML_FILE.tmp" "$TOML_FILE"
 
   # forwarding.secret anzeigen
   SECRET_FILE=$(grep -E '^forwarding-secret-file *= *' "$TOML_FILE" | cut -d= -f2- | tr -d ' "')
@@ -93,7 +105,7 @@ else
   echo "[ERROR] velocity.toml not found after startup"
 fi
 
-# === RCON Monitoring ===
+# === RCON-Monitoring ===
 touch "$BASE_DIR/rcon_targets.list"
 if [[ -f "$SCRIPT_DIR/../bin/rcon_monitor.sh" ]]; then
   cp "$SCRIPT_DIR/../bin/rcon_monitor.sh" "$BASE_DIR/rcon_monitor.sh"
@@ -102,7 +114,7 @@ else
   echo "[WARNING] rcon_monitor.sh not found in ../bin/. Skipped copying."
 fi
 
-# === systemd-Dienst einrichten ===
+# === systemd-Service ===
 cat << EOF > "/etc/systemd/system/$NAME.service"
 [Unit]
 Description=Velocity Proxy Server ($NAME)
@@ -125,6 +137,6 @@ systemctl enable "$NAME"
 
 echo ""
 echo "✅ Velocity proxy '$NAME' installiert unter: $TARGET_DIR"
-echo "➡️  Starte den Server bei Bedarf mit: systemctl start $NAME"
+echo "➡️  Starte ihn bei Bedarf mit: systemctl start $NAME"
 echo "📡 RCON-Tool: $BASE_DIR/rcon_monitor.sh"
 read -p "Drücke ENTER um zurück zum Menü zu kommen ..."
