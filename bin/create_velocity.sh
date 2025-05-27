@@ -2,7 +2,7 @@
 SCRIPT_DIR="$(dirname "$0")"
 BASE_DIR="/opt/minecraft"
 CONFIG_FILE="$SCRIPT_DIR/../config/global.conf"
-BIN_DIR="$SCRIPT_DIR/../bin"
+BIN_DIR="$SCRIPT_DIR/bin"
 
 # === Konfiguration laden oder Defaults setzen ===
 if [[ -f "$CONFIG_FILE" ]]; then
