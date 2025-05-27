@@ -2,12 +2,12 @@
 source "$(dirname "$0")/../config/global.conf"
 
 # Abhängigkeiten installieren
-apt update && apt install -y openjdk-21-jre-headless curl jq unzip
+apt update && apt install -y openjdk-21-jre-headless curl jq unzip yq
 
 # Einstellungen abfragen
 read -p "Server name (e.g. lobby): " NAME
 NAME=$(echo "$NAME" | tr '[:upper:]' '[:lower:]')
-TARGET_DIR="/opt/papermc/paper-$NAME"
+TARGET_DIR="/opt/minecraft/paper-$NAME"
 
 read -p "Server port [$DEFAULT_PAPER_PORT]: " SERVER_PORT
 SERVER_PORT=${SERVER_PORT:-$DEFAULT_PAPER_PORT}
@@ -29,7 +29,7 @@ if [[ "$IS_PROXY" =~ ^[Yy]$ ]]; then
   IS_VELOCITY=true
 fi
 
-# Verzeichnis erstellen
+# Verzeichnis vorbereiten
 mkdir -p "$TARGET_DIR"
 cd "$TARGET_DIR"
 
@@ -62,8 +62,13 @@ curl -Lo paper.jar "https://api.papermc.io/v2/projects/paper/versions/\$VERSION/
 EOF
 chmod +x update_$NAME.sh
 
-# Server initial starten (nur damit Konfigs erstellt werden)
-java -jar paper.jar nogui || true
+# Server initial starten (damit eula.txt + config generiert wird)
+java -jar paper.jar nogui &> /dev/null &
+PID=$!
+sleep 10
+kill "$PID" 2>/dev/null
+
+# EULA akzeptieren
 echo "eula=true" > eula.txt
 
 # server.properties schreiben
@@ -96,21 +101,17 @@ for i in {1..10}; do
   sleep 1
 done
 
-# Server nach dem Start stoppen
-pkill -f "paper.jar"
-
 # Velocity-Integration konfigurieren
 if [[ "$IS_VELOCITY" == "true" ]]; then
-  echo "➡️  Activating Velocity support..."
-  VELOCITY_SECRET_FILE="/opt/papermc/velocity/forwarding.secret"
-  if [[ -f "$VELOCITY_SECRET_FILE" ]]; then
-    VELOCITY_SECRET=$(cat "$VELOCITY_SECRET_FILE")
-    sed -i 's/^bungeecord: .*/bungeecord: true/' spigot.yml
-    sed -i "s/^  enabled: .*/  enabled: true/" config/paper-global.yml
-    sed -i "s/^  online-mode: .*/  online-mode: true/" config/paper-global.yml
-    sed -i "s/^  secret: .*/  secret: $VELOCITY_SECRET/" config/paper-global.yml
+  echo -e "\n➡️  Activating Velocity support..."
+
+  SECRET_FILE="/opt/minecraft/velocity/forwarding.secret"
+  if [[ -f "$SECRET_FILE" ]]; then
+    SECRET=$(cat "$SECRET_FILE")
+    yq e -i '.settings.bungeecord = true' spigot.yml
+    yq e -i ".proxies.velocity.enabled = true | .proxies.velocity.online-mode = true | .proxies.velocity.secret = \"$SECRET\"" config/paper-global.yml
   else
-    echo "[WARNING] Could not find Velocity secret file: $VELOCITY_SECRET_FILE"
+    echo "[WARNING] Could not find Velocity secret file: $SECRET_FILE"
   fi
 fi
 
@@ -138,13 +139,14 @@ systemctl start "paper-$NAME"
 # Zusammenfassung
 echo ""
 echo "✅ PaperMC server '$NAME' created and running."
+
 if [[ "$IS_VELOCITY" == "true" ]]; then
   echo ""
   echo "➡️  Add the following to your Velocity's velocity.toml:"
   echo "[$NAME]"
-  echo "address = \"<IP-OF-THIS-SERVER>:$SERVER_PORT\""
+  echo "address = \"$(hostname -I | awk '{print $1}'):$SERVER_PORT\""
   echo "try = [ \"$NAME\" ]"
 fi
 
 echo ""
-read -p "✅ Press ENTER to return to menu..."
+read -p "Drücke [Enter] um zum Menü zurückzukehren..."
