@@ -2,7 +2,7 @@ import os
 from bin.install_paper_server import main as install_paper_server
 from bin.install_velocity_server import main as install_velocity_server
 from bin.uninstall_server import main as uninstall_server
-from bin.open_rcon_terminal import main as open_rcon_terminal  # falls noch nicht vorhanden, musst du diese Datei erstellen
+#from bin.open_rcon_terminal import main as open_rcon_terminal  # falls noch nicht vorhanden, musst du diese Datei erstellen
 
 def show_menu():
     while True:
