@@ -97,7 +97,7 @@ def prepare_velocity_config(server_dir, name, port):
     print("➡️  Kopiere forwarding.secret nach /opt/minecraft...")
     forwarding_secret = server_dir / "forwarding.secret"
     if forwarding_secret.exists():
-        shutil.copy(forwarding_secret, BASE_DIR / f"forwarding_{name}.secret")
+        shutil.copy(forwarding_secret, BASE_DIR / "forwarding.secret")
 
 def create_systemd_service(name, server_dir, port):
     print("➡️  Erstelle systemd Service...")
