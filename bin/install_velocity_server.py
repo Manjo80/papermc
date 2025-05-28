@@ -21,6 +21,22 @@ def ask_velocity_settings():
         port = "25577"
     return name, port
 
+def stop_all_services(prefix):
+    print(f"➡️  Stoppe alle {prefix}-Server...")
+    result = subprocess.run(["systemctl", "list-units", "--type=service", "--no-pager"], capture_output=True, text=True)
+    for line in result.stdout.splitlines():
+        if line.startswith(prefix) and ".service" in line:
+            service = line.split()[0]
+            subprocess.run(["systemctl", "stop", service])
+
+def restart_all_services(prefix):
+    print(f"➡️  Starte gestoppte {prefix}-Server neu...")
+    result = subprocess.run(["systemctl", "list-unit-files"], capture_output=True, text=True)
+    for line in result.stdout.splitlines():
+        if line.startswith(prefix) and ".service" in line:
+            service = line.split()[0]
+            subprocess.run(["systemctl", "start", service])
+
 def download_velocity(target_dir):
     print("➡️  Lade neueste Velocity-Version herunter...")
     jar_path = target_dir / "velocity.jar"
@@ -56,6 +72,9 @@ def prepare_velocity_config(server_dir, name, port):
     inside_servers = False
     inside_forced = False
     for line in lines:
+        if line.strip().startswith("player-info-forwarding-mode"):
+            new_lines.append('player-info-forwarding-mode = "modern"\n')
+            continue
         if line.strip().startswith("[servers]"):
             new_lines.append("[servers]\n")
             new_lines.append("# Platzhalter - konfiguriere manuell\n")
@@ -115,6 +134,8 @@ def monitor_log(server_dir):
                 print(line.strip())
 
 def main():
+    stop_all_services("velocity-")
+    stop_all_services("paper-")
     name, port = ask_velocity_settings()
     server_dir = BASE_DIR / f"velocity-{name}"
     server_dir.mkdir(parents=True, exist_ok=True)
@@ -126,6 +147,8 @@ def main():
     create_systemd_service(name, server_dir, port)
     time.sleep(30)
     monitor_log(server_dir)
+    restart_all_services("paper-")
+    restart_all_services("velocity-")
 
 if __name__ == "__main__":
     main()
