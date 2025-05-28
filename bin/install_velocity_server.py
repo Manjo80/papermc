@@ -20,31 +20,11 @@ def ask_velocity_settings():
 
 def download_velocity(target_dir):
     print("➡️  Lade neueste Velocity-Version herunter...")
-
-    response = subprocess.check_output(["curl", "-s", VELOCITY_JAR_URL]).decode("utf-8")
-    try:
-        versions = json.loads(response)
-        latest_version = versions["versions"][-1]
-    except (json.JSONDecodeError, KeyError) as e:
-        print("❌ Fehler beim Abrufen der Velocity-Versionen:", e)
-        print("Antwort war:", response)
-        exit(1)
-
-    build_url = f"{VELOCITY_JAR_URL}/{latest_version}"
-    builds_raw = subprocess.check_output(["curl", "-s", build_url]).decode("utf-8")
-    try:
-        builds = json.loads(builds_raw)
-        latest_build = builds["builds"][-1]
-    except (json.JSONDecodeError, KeyError) as e:
-        print("❌ Fehler beim Abrufen der Builds:", e)
-        print("Antwort war:", builds_raw)
-        exit(1)
-
-    jar_name = f"velocity-{latest_version}-{latest_build}.jar"
-    jar_url = f"https://api.papermc.io/v2/projects/velocity/versions/{latest_version}/builds/{latest_build}/downloads/{jar_name}"
+    latest_version = "3.2.0-SNAPSHOT"
+    jar_url = f"https://papermc.io/api/v2/projects/velocity/versions/{latest_version}/builds/250/downloads/velocity-{latest_version}-250.jar"
     jar_path = target_dir / "velocity.jar"
 
-    print(f"➡️  Lade {jar_name} herunter...")
+    print(f"➡️  Lade velocity-{latest_version} herunter...")
     subprocess.run(["curl", "-o", str(jar_path), jar_url], check=True)
     return jar_path
     
