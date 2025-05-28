@@ -5,16 +5,15 @@ import requests
 import json
 from pathlib import Path
 from configparser import ConfigParser
+import yaml
 
 BASE_DIR = Path("/opt/minecraft")
 CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "global.conf"
-
 
 def load_config():
     config = ConfigParser()
     config.read(CONFIG_PATH)
     return config['DEFAULT']
-
 
 def download_latest_paper(target_dir):
     print("➡️  Lade neueste PaperMC-Version herunter...")
@@ -29,7 +28,6 @@ def download_latest_paper(target_dir):
     with open(jar_path, 'wb') as f:
         f.write(r.content)
     return jar_path
-
 
 def start_server_once(server_dir):
     print("➡️  Starte Server zum Erzeugen der Dateien...")
@@ -50,12 +48,10 @@ def start_server_once(server_dir):
         process.wait()
         raise RuntimeError("EULA-Meldung wurde nicht erkannt")
 
-
 def apply_eula(server_dir):
     print("➡️  Akzeptiere EULA...")
     with open(server_dir / "eula.txt", "w") as f:
         f.write("eula=true\n")
-
 
 def ask_server_properties(defaults):
     name = input("Servername: ").strip().lower()
@@ -70,7 +66,6 @@ def ask_server_properties(defaults):
     if mode == "v":
         proxy_secret = input("Velocity Forwarding Secret: ")
     return name, port, rcon_port, rcon_pass, view_distance, level_name, seed, mode, proxy_secret
-
 
 def write_server_properties(server_dir, defaults, port, rcon_port, rcon_pass, view_distance, level_name, seed):
     print("➡️  Schreibe server.properties...")
@@ -98,6 +93,30 @@ rcon.password={rcon_pass}"""
     with open(server_dir / "server.properties", "w") as f:
         f.write(props.strip() + "\n")
 
+def configure_spigot_and_global(server_dir, proxy_secret):
+    print("➡️  Konfiguriere spigot.yml und paper-global.yml...")
+    spigot_path = server_dir / "spigot.yml"
+    paper_global_path = server_dir / "config" / "paper-global.yml"
+
+    if spigot_path.exists():
+        with open(spigot_path, 'r') as f:
+            spigot_data = yaml.safe_load(f)
+        spigot_data['settings']['bungeecord'] = True
+        with open(spigot_path, 'w') as f:
+            yaml.dump(spigot_data, f)
+
+    if paper_global_path.exists():
+        with open(paper_global_path, 'r') as f:
+            paper_data = yaml.safe_load(f)
+        paper_data['proxies'] = {
+            'velocity': {
+                'enabled': True,
+                'online-mode': True,
+                'secret': proxy_secret
+            }
+        }
+        with open(paper_global_path, 'w') as f:
+            yaml.dump(paper_data, f)
 
 def create_systemd_service(name, server_dir):
     print("➡️  Erstelle systemd Service...")
@@ -122,7 +141,6 @@ WantedBy=multi-user.target
     subprocess.run(["systemctl", "enable", f"paper-{name}"])
     subprocess.run(["systemctl", "start", f"paper-{name}"])
 
-
 def monitor_log_for_warnings(server_dir):
     print("➡️  Überwache Logs auf Fehler oder Warnungen...")
     log_file = server_dir / "logs" / "latest.log"
@@ -131,7 +149,6 @@ def monitor_log_for_warnings(server_dir):
             for line in f:
                 if any(w in line for w in ["[ERROR]", "[WARN]"]):
                     print(line.strip())
-
 
 def main():
     defaults = load_config()
@@ -143,13 +160,14 @@ def main():
     start_server_once(server_dir)
     apply_eula(server_dir)
     write_server_properties(server_dir, defaults, port, rcon_port, rcon_pass, view_distance, level_name, seed)
+    if mode == "v":
+        configure_spigot_and_global(server_dir, proxy_secret)
     create_systemd_service(name, server_dir)
 
     print("➡️  Starte Server erneut, um vollständige Konfiguration zu erzeugen...")
     subprocess.run(["systemctl", "restart", f"paper-{name}"])
     time.sleep(30)
     monitor_log_for_warnings(server_dir)
-
 
 if __name__ == "__main__":
     main()
