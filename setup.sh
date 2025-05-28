@@ -1,11 +1,5 @@
 #!/bin/bash
 
-# Sicherstellen, dass das Skript als Root läuft
-if [[ $EUID -ne 0 ]]; then
-   echo "❌ Dieses Skript muss als Root ausgeführt werden."
-   exit 1
-fi
-
 echo "📦 Systempakete installieren..."
 apt update && apt install -y python3 python3-pip openjdk-21-jre-headless curl jq unzip git || {
     echo "❌ Fehler bei der Paketinstallation"
