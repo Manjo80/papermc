@@ -2,13 +2,13 @@ import os
 import subprocess
 import time
 import shutil
+import json
 from pathlib import Path
 
 BASE_DIR = Path("/opt/minecraft")
 VELOCITY_DIR = Path("/opt/velocity-temp")
 
 VELOCITY_JAR_URL = "https://api.papermc.io/v2/projects/velocity/versions"
-
 
 def ask_velocity_settings():
     name = input("Servername: ").strip().lower()
@@ -18,19 +18,21 @@ def ask_velocity_settings():
         port = "25577"
     return name, port
 
-
 def download_velocity(target_dir):
     print("➡️  Lade neueste Velocity-Version herunter...")
-    versions = subprocess.check_output(["curl", "-s", f"{VELOCITY_JAR_URL}"]).decode("utf-8")
-    latest_version = eval(versions)["versions"][-1]
-    builds = subprocess.check_output(["curl", "-s", f"{VELOCITY_JAR_URL}/{latest_version}"]).decode("utf-8")
-    latest_build = eval(builds)["builds"][-1]
+    versions_raw = subprocess.check_output(["curl", "-s", f"{VELOCITY_JAR_URL}"]).decode("utf-8")
+    versions = json.loads(versions_raw)
+    latest_version = versions["versions"][-1]
+
+    builds_raw = subprocess.check_output(["curl", "-s", f"{VELOCITY_JAR_URL}/{latest_version}"]).decode("utf-8")
+    builds = json.loads(builds_raw)
+    latest_build = builds["builds"][-1]
+
     jar_name = f"velocity-{latest_version}-{latest_build}.jar"
     jar_url = f"https://api.papermc.io/v2/projects/velocity/versions/{latest_version}/builds/{latest_build}/downloads/{jar_name}"
     jar_path = target_dir / "velocity.jar"
     subprocess.run(["curl", "-o", str(jar_path), jar_url], check=True)
     return jar_path
-
 
 def start_velocity_once(server_dir):
     print("➡️  Starte Velocity Server zur Initialisierung...")
@@ -44,7 +46,6 @@ def start_velocity_once(server_dir):
     time.sleep(5)
     process.terminate()
     process.wait()
-
 
 def prepare_velocity_config(server_dir, name, port):
     print("➡️  Passe velocity.toml an...")
@@ -84,7 +85,6 @@ def prepare_velocity_config(server_dir, name, port):
     if forwarding_secret.exists():
         shutil.copy(forwarding_secret, BASE_DIR / f"forwarding_{name}.secret")
 
-
 def create_systemd_service(name, server_dir, port):
     print("➡️  Erstelle systemd Service...")
     service_file = f"/etc/systemd/system/velocity-{name}.service"
@@ -108,7 +108,6 @@ WantedBy=multi-user.target
     subprocess.run(["systemctl", "enable", f"velocity-{name}"])
     subprocess.run(["systemctl", "start", f"velocity-{name}"])
 
-
 def monitor_log(server_dir):
     print("➡️  Überwache Logs auf Fehler oder Warnungen...")
     log_path = server_dir / "logs" / "latest.log"
@@ -119,7 +118,6 @@ def monitor_log(server_dir):
         for line in f:
             if any(w in line for w in ["[ERROR]", "[WARN]"]):
                 print(line.strip())
-
 
 def main():
     name, port = ask_velocity_settings()
