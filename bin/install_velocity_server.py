@@ -19,13 +19,16 @@ def ask_velocity_settings():
     return name, port
 
 def download_velocity(target_dir):
-    print("➡️  Lade neueste Velocity-Version herunter...")
-    latest_version = "3.2.0-SNAPSHOT"
-    jar_url = f"https://papermc.io/api/v2/projects/velocity/versions/{latest_version}/builds/250/downloads/velocity-{latest_version}-250.jar"
+    print("➡️  Lade Velocity 3.4.0-SNAPSHOT Build 509 herunter...")
+    jar_name = "velocity-3.4.0-SNAPSHOT-509.jar"
+    jar_url = f"https://api.papermc.io/v2/projects/velocity/versions/3.4.0-SNAPSHOT/builds/509/downloads/{jar_name}"
     jar_path = target_dir / "velocity.jar"
-
-    print(f"➡️  Lade velocity-{latest_version} herunter...")
-    subprocess.run(["curl", "-o", str(jar_path), jar_url], check=True)
+    r = requests.get(jar_url)
+    if r.status_code != 200:
+        print(f"❌ Fehler beim Herunterladen: Status {r.status_code}")
+        return None
+    with open(jar_path, 'wb') as f:
+        f.write(r.content)
     return jar_path
     
 def start_velocity_once(server_dir):
