@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # Root-Prüfung
 if [[ $EUID -ne 0 ]]; then
    echo "❌ Dieses Skript muss als Root ausgeführt werden."
