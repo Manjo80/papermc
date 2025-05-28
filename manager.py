@@ -1,6 +1,10 @@
 import os
 import sys
 
+# Funktion zum Löschen des Bildschirms
+def clear_screen():
+    os.system('cls' if os.name == 'nt' else 'clear')
+
 # Lokales Projektverzeichnis einfügen
 sys.path.append(os.path.join(os.path.dirname(__file__), "bin"))
 
@@ -16,9 +20,9 @@ except ImportError:
     print("[FEHLER] Kann 'install_velocity_server' nicht importieren.")
     install_velocity_server = None
 
-
 def show_menu():
     while True:
+        clear_screen()
         print("==== Minecraft Server Manager ====")
         print("1. Neuen PaperMC Server installieren")
         print("2. Neuen Velocity Server installieren")
@@ -42,7 +46,6 @@ def show_menu():
             break
         else:
             print("❌ Ungültige Auswahl.")
-
 
 if __name__ == "__main__":
     show_menu()
