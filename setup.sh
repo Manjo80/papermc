@@ -2,7 +2,7 @@
 
 # Sicherstellen, dass das Skript als Root läuft
 if [[ $EUID -ne 0 ]]; then
-   echo "Dieses Skript muss als Root ausgeführt werden." 
+   echo "❌ Dieses Skript muss als Root ausgeführt werden." 
    exit 1
 fi
 
@@ -13,8 +13,13 @@ echo "🧰 Projekt vorbereiten..."
 mkdir -p /opt/minecraft
 cd /opt/minecraft || exit 1
 
-# Optional: hier könntest du das Repo klonen oder prüfen
-# git clone https://github.com/dein-repo/minecraft-manager.git .
+# Optional: Repository klonen, wenn es noch nicht da ist
+if [ ! -d ".git" ]; then
+  echo "📥 Klone Repository..."
+  git clone https://github.com/manjo80/papermc.git .
+else
+  echo "🔁 Repository scheint schon vorhanden zu sein."
+fi
 
 echo "🚀 Starte Manager..."
 python3 manager.py
