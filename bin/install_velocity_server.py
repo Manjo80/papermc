@@ -3,12 +3,15 @@ import subprocess
 import time
 import shutil
 import json
+import requests
 from pathlib import Path
 
 BASE_DIR = Path("/opt/minecraft")
 VELOCITY_DIR = Path("/opt/velocity-temp")
 
-VELOCITY_JAR_URL = "https://api.papermc.io/v2/projects/velocity/versions"
+VELOCITY_VERSION = "3.4.0-SNAPSHOT"
+VELOCITY_BUILD = "509"
+VELOCITY_JAR_URL = f"https://api.papermc.io/v2/projects/velocity/versions/{VELOCITY_VERSION}/builds/{VELOCITY_BUILD}/downloads/velocity-{VELOCITY_VERSION}-{VELOCITY_BUILD}.jar"
 
 def ask_velocity_settings():
     name = input("Servername: ").strip().lower()
@@ -19,18 +22,13 @@ def ask_velocity_settings():
     return name, port
 
 def download_velocity(target_dir):
-    print("➡️  Lade Velocity 3.4.0-SNAPSHOT Build 509 herunter...")
-    jar_name = "velocity-3.4.0-SNAPSHOT-509.jar"
-    jar_url = f"https://api.papermc.io/v2/projects/velocity/versions/3.4.0-SNAPSHOT/builds/509/downloads/{jar_name}"
+    print("➡️  Lade neueste Velocity-Version herunter...")
     jar_path = target_dir / "velocity.jar"
-    r = requests.get(jar_url)
-    if r.status_code != 200:
-        print(f"❌ Fehler beim Herunterladen: Status {r.status_code}")
-        return None
+    r = requests.get(VELOCITY_JAR_URL)
     with open(jar_path, 'wb') as f:
         f.write(r.content)
     return jar_path
-    
+
 def start_velocity_once(server_dir):
     print("➡️  Starte Velocity Server zur Initialisierung...")
     process = subprocess.Popen(["java", "-jar", "velocity.jar"], cwd=server_dir,
