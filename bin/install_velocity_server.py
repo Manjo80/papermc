@@ -8,14 +8,12 @@ BASE_DIR = Path("/opt/minecraft")
 CONFIG_DIR = Path("/opt/papermc/config")
 VELOCITY_PORT_DEFAULT = 25577
 
-
 def get_valid_port(prompt, default):
     while True:
         port_input = input(f"{prompt} [{default}]: ") or str(default)
         if port_input.isdigit() and 1024 < int(port_input) < 65535:
             return port_input
         print("❌ Ungültiger Port. Bitte gib eine Zahl zwischen 1025 und 65534 ein.")
-
 
 def download_velocity(target_dir):
     print("➡️  Lade neueste Velocity-Version herunter...")
@@ -31,7 +29,6 @@ def download_velocity(target_dir):
         f.write(r.content)
     return latest_version, jar_path
 
-
 def generate_velocity_config(target_dir, port):
     print("➡️  Erzeuge velocity.toml...")
     velocity_toml = target_dir / "velocity.toml"
@@ -42,12 +39,36 @@ motd = "A Velocity Server"
 show-max-players = 500
 announce-forge = false
 forwarding-secret-file = "forwarding.secret"
-servers = {{}}
-forced-hosts = {{}}
+
+[servers]
+# Platzhalter - konfiguriere manuell
+
+[forced-hosts]
+# Platzhalter - konfiguriere manuell
 """
     with open(velocity_toml, "w") as f:
-        f.write(content.strip())
+        f.write(content.strip() + "\n")
 
+def truncate_sections_in_velocity_toml(file_path):
+    print("➡️  Bereinige [servers] und [forced-hosts] in velocity.toml...")
+    with open(file_path, "r") as f:
+        lines = f.readlines()
+
+    output = []
+    skip = False
+    for line in lines:
+        if line.strip().startswith("[servers]"):
+            output.append("[servers]\n# Platzhalter - konfiguriere manuell\n\n")
+            skip = True
+            continue
+        if line.strip().startswith("[forced-hosts]"):
+            output.append("[forced-hosts]\n# Platzhalter - konfiguriere manuell\n")
+            break  # rest ignorieren
+        if not skip:
+            output.append(line)
+
+    with open(file_path, "w") as f:
+        f.writelines(output)
 
 def copy_forwarding_secret(server_dir):
     print("➡️  Kopiere forwarding.secret nach /opt/minecraft...")
@@ -57,7 +78,6 @@ def copy_forwarding_secret(server_dir):
         subprocess.run(["cp", str(src), str(dest)])
     else:
         print("⚠️  forwarding.secret wurde nicht gefunden. Wird wahrscheinlich erst nach dem ersten Start erstellt.")
-
 
 def create_systemd_service(name, server_dir):
     print("➡️  Erstelle systemd Service...")
@@ -82,6 +102,16 @@ WantedBy=multi-user.target
     subprocess.run(["systemctl", "enable", f"velocity-{name}"])
     subprocess.run(["systemctl", "start", f"velocity-{name}"])
 
+def stream_velocity_log(server_dir):
+    log_path = server_dir / "logs" / "latest.log"
+    print("➡️  Server-Logausgabe:")
+    for _ in range(30):
+        if log_path.exists():
+            with open(log_path, "r") as f:
+                for line in f:
+                    print(line.strip())
+            break
+        time.sleep(1)
 
 def main():
     name = input("Velocity-Servername: ").strip().lower()
@@ -90,19 +120,22 @@ def main():
     server_dir.mkdir(parents=True, exist_ok=True)
 
     version, jar_path = download_velocity(server_dir)
-
     generate_velocity_config(server_dir, port)
-    create_systemd_service(name, server_dir)
 
     print("➡️  Starte Server für Initialisierung...")
-    subprocess.run(["systemctl", "restart", f"velocity-{name}"])
+    subprocess.run(["/usr/bin/java", "-Xmx512M", "-Xms512M", "-jar", "velocity.jar"], cwd=server_dir)
     time.sleep(10)
 
+    truncate_sections_in_velocity_toml(server_dir / "velocity.toml")
+
+    create_systemd_service(name, server_dir)
+    subprocess.run(["systemctl", "restart", f"velocity-{name}"])
+    time.sleep(10)
+    stream_velocity_log(server_dir)
     copy_forwarding_secret(server_dir)
 
-    print("✅ Velocity-Server '{name}' installiert und gestartet.")
+    print(f"✅ Velocity-Server '{name}' installiert und gestartet.")
     print("➡️  Ergänze velocity.toml manuell mit deinen Servereinträgen.")
-
 
 if __name__ == "__main__":
     main()
