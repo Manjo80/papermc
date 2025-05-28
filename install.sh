@@ -8,6 +8,12 @@ fi
 # Pakete installieren
 apt update && apt install -y python3 python3-pip openjdk-21-jre-headless curl jq unzip git
 
+echo "📦 Python-Abhängigkeiten installieren..."
+pip3 install -r /opt/papermc/requirements.txt || {
+    echo "❌ Fehler bei pip-Installation"
+    exit 1
+}
+
 # Verzeichnisse vorbereiten
 mkdir -p /opt/papermc
 mkdir -p /opt/minecraft
