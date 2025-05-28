@@ -1,29 +1,33 @@
-import sys
+#!/usr/bin/env python3
+
 import os
+import sys
 import subprocess
 
-# Pfad zum bin-Ordner hinzufügen
+# bin-Verzeichnis zur Importsuche hinzufügen
 BIN_DIR = os.path.join(os.path.dirname(__file__), 'bin')
 sys.path.append(BIN_DIR)
 
-# Module aus bin laden
+# Install-Modul importieren
 try:
-    from install_paper_server import run as install_paper_server
-except ImportError:
-    print("[FEHLER] Kann install_paper_server nicht importieren. Stelle sicher, dass die Datei in 'bin/' liegt.")
+    from install_paper_server import main as install_paper_server
+except ImportError as e:
+    print("[FEHLER] Kann 'install_paper_server' nicht importieren:")
+    print(e)
     sys.exit(1)
 
 def uninstall_server():
     name = input("Name des Servers zum Entfernen: ").strip().lower()
     target_dir = f"/opt/minecraft/paper-{name}"
     service_name = f"paper-{name}.service"
+
     try:
         subprocess.run(["systemctl", "stop", service_name], check=True)
         subprocess.run(["systemctl", "disable", service_name], check=True)
         os.remove(f"/etc/systemd/system/{service_name}")
         subprocess.run(["systemctl", "daemon-reexec"], check=True)
-        subprocess.run(["rm", "-rf", target_dir])
-        print(f"✅ Server '{name}' wurde entfernt.")
+        subprocess.run(["rm", "-rf", target_dir], check=True)
+        print(f"✅ Server '{name}' wurde vollständig entfernt.")
     except Exception as e:
         print(f"[FEHLER] Beim Entfernen ist ein Fehler aufgetreten: {e}")
 
@@ -55,9 +59,10 @@ def show_menu():
         elif choice == "3":
             open_rcon_terminal()
         elif choice == "4":
+            print("👋 Auf Wiedersehen.")
             break
         else:
-            print("Ungültige Auswahl.")
+            print("❌ Ungültige Auswahl.")
             input("Drücke ENTER zum Fortfahren...")
 
 if __name__ == "__main__":
