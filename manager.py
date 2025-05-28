@@ -1,70 +1,64 @@
-#!/usr/bin/env python3
-
-import os
 import sys
+import os
 import subprocess
 
-# Konstanten
-BASE_DIR = "/opt/minecraft"
-BIN_DIR = os.path.join(BASE_DIR, "bin")
-SERVERS_DIR = os.path.join(BASE_DIR, "servers")
+# Pfad zum bin-Ordner hinzufügen
+BIN_DIR = os.path.join(os.path.dirname(__file__), 'bin')
+sys.path.append(BIN_DIR)
 
-# Sicherstellen, dass alle Verzeichnisse existieren
-os.makedirs(BIN_DIR, exist_ok=True)
-os.makedirs(SERVERS_DIR, exist_ok=True)
-
-def main_menu():
-    while True:
-        print("\n=== Minecraft Server Manager ===")
-        print("1. Paper Server installieren")
-        print("2. Velocity installieren")
-        print("3. Server starten")
-        print("4. Server stoppen")
-        print("5. Server deinstallieren")
-        print("6. RCON-Terminal öffnen")
-        print("7. Beenden")
-        choice = input("Auswahl: ")
-
-        if choice == "1":
-            install_paper()
-        elif choice == "2":
-            install_velocity()
-        elif choice == "3":
-            start_server()
-        elif choice == "4":
-            stop_server()
-        elif choice == "5":
-            uninstall_server()
-        elif choice == "6":
-            open_rcon()
-        elif choice == "7":
-            sys.exit(0)
-        else:
-            print("❌ Ungültige Eingabe!")
-
-def install_paper():
-    print("⚙️  Installiere Paper Server...")
-    subprocess.run(["python3", os.path.join(BIN_DIR, "install_paper.py")])
-
-def install_velocity():
-    print("⚙️  Installiere Velocity Proxy...")
-    subprocess.run(["python3", os.path.join(BIN_DIR, "install_velocity.py")])
-
-def start_server():
-    print("🚀 Starte Server...")
-    subprocess.run(["python3", os.path.join(BIN_DIR, "start_server.py")])
-
-def stop_server():
-    print("🛑 Stoppe Server...")
-    subprocess.run(["python3", os.path.join(BIN_DIR, "stop_server.py")])
+# Module aus bin laden
+try:
+    from install_paper_server import run as install_paper_server
+except ImportError:
+    print("[FEHLER] Kann install_paper_server nicht importieren. Stelle sicher, dass die Datei in 'bin/' liegt.")
+    sys.exit(1)
 
 def uninstall_server():
-    print("🧹 Deinstalliere Server...")
-    subprocess.run(["python3", os.path.join(BIN_DIR, "uninstall_server.py")])
+    name = input("Name des Servers zum Entfernen: ").strip().lower()
+    target_dir = f"/opt/minecraft/paper-{name}"
+    service_name = f"paper-{name}.service"
+    try:
+        subprocess.run(["systemctl", "stop", service_name], check=True)
+        subprocess.run(["systemctl", "disable", service_name], check=True)
+        os.remove(f"/etc/systemd/system/{service_name}")
+        subprocess.run(["systemctl", "daemon-reexec"], check=True)
+        subprocess.run(["rm", "-rf", target_dir])
+        print(f"✅ Server '{name}' wurde entfernt.")
+    except Exception as e:
+        print(f"[FEHLER] Beim Entfernen ist ein Fehler aufgetreten: {e}")
 
-def open_rcon():
-    print("🔌 Starte RCON-Terminal...")
-    subprocess.run(["python3", os.path.join(BIN_DIR, "rcon_terminal.py")])
+def open_rcon_terminal():
+    host = input("Server-Host (z. B. 127.0.0.1): ").strip()
+    port = input("RCON-Port (z. B. 25575): ").strip()
+    password = input("RCON-Passwort: ").strip()
+    try:
+        subprocess.run(["mcrcon", "-H", host, "-P", port, "-p", password])
+    except FileNotFoundError:
+        print("[FEHLER] mcrcon ist nicht installiert. Bitte installiere es zuerst.")
+    except Exception as e:
+        print(f"[FEHLER] {e}")
+
+def show_menu():
+    while True:
+        os.system("clear")
+        print("==== Minecraft Server Manager ====")
+        print("1. Neuen PaperMC Server installieren")
+        print("2. Bestehenden Server deinstallieren")
+        print("3. RCON-Terminal öffnen")
+        print("4. Beenden")
+        choice = input("> ")
+
+        if choice == "1":
+            install_paper_server()
+        elif choice == "2":
+            uninstall_server()
+        elif choice == "3":
+            open_rcon_terminal()
+        elif choice == "4":
+            break
+        else:
+            print("Ungültige Auswahl.")
+            input("Drücke ENTER zum Fortfahren...")
 
 if __name__ == "__main__":
-    main_menu()
+    show_menu()
