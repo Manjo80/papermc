@@ -1,33 +1,42 @@
 #!/bin/bash
-# Root-Pr  fung
+
+# Root-Prüfung
 if [[ $EUID -ne 0 ]]; then
-   echo " ^}^l Dieses Skript muss als Root ausgef  hrt werden."
+   echo "❌ Dieses Skript muss als Root ausgeführt werden."
    exit 1
 fi
 
-# Pakete installieren
-apt update && apt install -y python3 python3-pip openjdk-21-jre-headless curl jq unzip git
+echo "📦 Systempakete installieren..."
+apt update && apt install -y python3 python3-pip python3-venv openjdk-21-jre-headless curl jq unzip git
 
-echo "📦 Python-Abhängigkeiten installieren..."
-pip3 install -r /opt/papermc/requirements.txt || {
-    echo "❌ Fehler bei pip-Installation"
-    exit 1
-}
-
-# Verzeichnisse vorbereiten
+echo "🧰 Verzeichnisse vorbereiten..."
 mkdir -p /opt/papermc
 mkdir -p /opt/minecraft
 
 # Repository klonen, falls noch nicht vorhanden
 if [ ! -d "/opt/papermc/.git" ]; then
     git clone https://github.com/manjo80/papermc.git /opt/papermc || {
-        echo " ^}^l Fehler beim Klonen des Repositories"
+        echo "❌ Fehler beim Klonen des Repositories"
         exit 1
     }
 else
-    echo " ^=^t^a Repository scheint schon vorhanden zu sein."
+    echo "🔁 Repository scheint schon vorhanden zu sein."
 fi
 
-# In das Repo wechseln und manager starten
 cd /opt/papermc || exit 1
-python3 manager.py
+
+# Virtuelle Umgebung einrichten
+echo "🐍 Virtuelle Python-Umgebung einrichten..."
+python3 -m venv .venv
+
+# Aktivieren und Abhängigkeiten installieren
+source .venv/bin/activate
+echo "📦 Python-Abhängigkeiten installieren..."
+pip install -r requirements.txt || {
+    echo "❌ Fehler bei pip-Installation"
+    exit 1
+}
+
+# Start des Managers über die virtuelle Umgebung
+echo "🚀 Starte Manager..."
+python manager.py
