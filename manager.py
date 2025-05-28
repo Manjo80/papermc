@@ -1,51 +1,33 @@
 import os
-import sys
-
-# Funktion zum Löschen des Bildschirms
-def clear_screen():
-    os.system('cls' if os.name == 'nt' else 'clear')
-
-# Lokales Projektverzeichnis einfügen
-sys.path.append(os.path.join(os.path.dirname(__file__), "bin"))
-
-try:
-    from install_paper_server import main as install_paper_server
-except ImportError:
-    print("[FEHLER] Kann 'install_paper_server' nicht importieren.")
-    install_paper_server = None
-
-try:
-    from install_velocity_server import main as install_velocity_server
-except ImportError:
-    print("[FEHLER] Kann 'install_velocity_server' nicht importieren.")
-    install_velocity_server = None
+from bin.install_paper_server import main as install_paper_server
+from bin.install_velocity_server import main as install_velocity_server
+from bin.uninstall_server import main as uninstall_server
+from bin.open_rcon_terminal import main as open_rcon_terminal  # falls noch nicht vorhanden, musst du diese Datei erstellen
 
 def show_menu():
     while True:
-        clear_screen()
+        os.system("clear")
         print("==== Minecraft Server Manager ====")
         print("1. Neuen PaperMC Server installieren")
-        print("2. Neuen Velocity Server installieren")
+        print("2. Velocity Proxy installieren")
         print("3. Bestehenden Server deinstallieren")
         print("4. RCON-Terminal öffnen")
         print("5. Beenden")
-        choice = input("> ").strip()
+        choice = input("> ")
 
         if choice == "1":
-            if install_paper_server:
-                install_paper_server()
+            install_paper_server()
         elif choice == "2":
-            if install_velocity_server:
-                install_velocity_server()
+            install_velocity_server()
         elif choice == "3":
-            os.system("python3 bin/uninstall_server.py")
+            uninstall_server()
         elif choice == "4":
-            os.system("python3 bin/rcon_terminal.py")
+            open_rcon_terminal()
         elif choice == "5":
-            print("Beende...")
             break
         else:
-            print("❌ Ungültige Auswahl.")
+            print("❌ Ungültige Eingabe.")
+            input("Weiter mit Enter...")
 
 if __name__ == "__main__":
     show_menu()
