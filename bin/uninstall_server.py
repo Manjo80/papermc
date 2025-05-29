@@ -1,56 +1,30 @@
-import os
-import subprocess
+from uninstall.service_remover import remove_service
+from uninstall.folder_cleaner import remove_server_folder
+from uninstall.velocity_toml_editor import remove_from_velocity_toml
+from config.config_loader import load_config
 from pathlib import Path
+import sys
 
 BASE_DIR = Path("/opt/minecraft")
 
-def list_installed_servers():
-    servers = []
-    for entry in BASE_DIR.iterdir():
-        if entry.is_dir() and (entry.name.startswith("paper-") or entry.name.startswith("velocity-")):
-            servers.append(entry.name)
-    return servers
+def uninstall_server():
+    config = load_config()
+    name = input("Name des zu entfernenden Servers: ").strip().lower()
 
-def delete_server(server_name):
-    server_path = BASE_DIR / server_name
-    service_name = f"paper-{server_name[6:]}" if server_name.startswith("paper-") else f"velocity-{server_name[9:]}"
-    
-    print(f"➡️  Stoppe systemd Service {service_name}...")
-    subprocess.run(["systemctl", "stop", service_name], check=False)
-    subprocess.run(["systemctl", "disable", service_name], check=False)
+    paper_dir = BASE_DIR / f"paper-{name}"
+    velocity_dirs = list(BASE_DIR.glob("velocity-*/velocity.toml"))
 
-    print(f"🗑️  Lösche systemd Service-Datei...")
-    service_file = f"/etc/systemd/system/{service_name}.service"
-    if os.path.exists(service_file):
-        os.remove(service_file)
-        subprocess.run(["systemctl", "daemon-reload"])
+    if not paper_dir.exists():
+        print(f"❌ Serververzeichnis nicht gefunden: {paper_dir}")
+        sys.exit(1)
 
-    print(f"🧹  Entferne Server-Verzeichnis {server_path}...")
-    subprocess.run(["rm", "-rf", str(server_path)])
+    remove_service(name, "paper")
+    remove_server_folder(paper_dir)
 
-    print(f"✅ Server '{server_name}' wurde entfernt.")
+    for toml_path in velocity_dirs:
+        remove_from_velocity_toml(toml_path, name)
 
-def main():
-    servers = list_installed_servers()
-    if not servers:
-        print("❌ Keine Server gefunden.")
-        return
-
-    print("🧾 Verfügbare Server:")
-    for i, s in enumerate(servers, 1):
-        print(f"{i}. {s}")
-
-    choice = input("Wähle Server zum Löschen (Zahl): ")
-    if not choice.isdigit() or int(choice) < 1 or int(choice) > len(servers):
-        print("❌ Ungültige Auswahl.")
-        return
-
-    selected = servers[int(choice) - 1]
-    confirm = input(f"❗ Bist du sicher, dass du '{selected}' löschen willst? (y/n): ")
-    if confirm.lower() == 'y':
-        delete_server(selected)
-    else:
-        print("🚫 Abgebrochen.")
+    print(f"✅ Server {name} erfolgreich entfernt.")
 
 if __name__ == "__main__":
-    main()
+    uninstall_server()
