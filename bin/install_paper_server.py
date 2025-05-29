@@ -17,6 +17,7 @@ from paper import (
     update_velocity_toml,
     create_systemd_service,
     monitor_log_for_warnings,
+    run_server_once,
 )
 
 BASE_DIR = Path("/opt/minecraft")
