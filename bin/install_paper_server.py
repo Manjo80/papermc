@@ -217,8 +217,6 @@ def main():
     start_server_once(server_dir)
     apply_eula(server_dir)
     write_server_properties(server_dir, defaults, port, rcon_port, rcon_pass, view_distance, level_name, seed, velocity_secret)
-    update_spigot(server_dir)
-    update_paper_global(server_dir, velocity_secret, velocity_online_mode)
     if velocity_toml:
         update_velocity_toml(velocity_toml, name, port)
 
@@ -227,6 +225,8 @@ def main():
     print("➡️  Starte Server erneut, um vollständige Konfiguration zu erzeugen...")
     subprocess.run(["systemctl", "restart", f"paper-{name}"])
     time.sleep(30)
+    update_spigot(server_dir)
+    update_paper_global(server_dir, velocity_secret, velocity_online_mode)
     monitor_log_for_warnings(server_dir)
 
 if __name__ == "__main__":
