@@ -1,31 +1,35 @@
-# install_velocity_server.py
+from velocity.config_loader import load_config
+from velocity.downloader import download_velocity_jar
+from velocity.initializer import initialize_velocity_config
+from velocity.configurator import configure_velocity_toml
+from velocity.service_creator import create_velocity_service
+from velocity.secret_handler import create_forwarding_secret
 
 from pathlib import Path
-from bin.velocity.config_loader import load_config
-from bin.velocity.downloader import download_latest_velocity
-from bin.velocity.initializer import start_velocity_once
-from bin.velocity.configurator import apply_velocity_toml
-from bin.velocity.service_creator import create_systemd_service
-from bin.velocity.secret_handler import copy_forwarding_secret
 
 BASE_DIR = Path("/opt/minecraft")
 
 def main():
-    config = load_config()
+    defaults = load_config()
 
-    name = input("Velocity-Servername: ").strip().lower()
-    port = input(f"Port [{config['DEFAULT_VELOCITY_PORT']}]: ") or config['DEFAULT_VELOCITY_PORT']
-    server_dir = BASE_DIR / f"velocity-{name}"
-    server_dir.mkdir(parents=True, exist_ok=True)
+    name = input("➡️  Name des Velocity-Servers: ").strip().lower()
+    velocity_dir = BASE_DIR / f"velocity-{name}"
+    velocity_dir.mkdir(parents=True, exist_ok=True)
 
-    # Installation
-    download_latest_velocity(server_dir)
-    start_velocity_once(server_dir)
-    apply_velocity_toml(server_dir)
-    copy_forwarding_secret(server_dir)
-    create_systemd_service(name, server_dir, config['DEFAULT_MIN_RAM'], config['DEFAULT_MAX_RAM'])
+    # Download + Initialisierung
+    download_velocity_jar(velocity_dir)
+    initialize_velocity_config(velocity_dir)
 
-    print("✅ Velocity Server erfolgreich installiert.")
+    # Konfiguration des TOML
+    configure_velocity_toml(velocity_dir, name, defaults)
+
+    # Secret erzeugen
+    create_forwarding_secret(BASE_DIR)
+
+    # Systemd-Service erstellen
+    create_velocity_service(name, velocity_dir)
+
+    print("✅ Velocity-Server erfolgreich eingerichtet.")
 
 if __name__ == "__main__":
     main()
