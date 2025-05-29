@@ -1,8 +1,8 @@
-from uninstall.config_loader import load_config
-from uninstall.server_finder import list_paper_servers
-from uninstall.service_remover import remove_systemd_service
-from uninstall.file_cleaner import delete_server_directory
-from uninstall.velocity_cleanup import remove_from_velocity_toml
+from bin.uninstall.config_loader import load_config
+from bin.uninstall.server_finder import list_paper_servers
+from bin.uninstall.service_remover import remove_systemd_service
+from bin.uninstall.file_cleaner import delete_server_directory
+from bin.uninstall.velocity_cleanup import remove_from_velocity_toml
 from pathlib import Path
 
 def main():
