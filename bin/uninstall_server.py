@@ -1,30 +1,54 @@
-from uninstall.service_remover import remove_service
-from uninstall.folder_cleaner import remove_server_folder
-from uninstall.velocity_toml_editor import remove_from_velocity_toml
-from config.config_loader import load_config
+from uninstall.config_loader import load_config
+from uninstall.server_finder import list_paper_servers
+from uninstall.service_remover import remove_systemd_service
+from uninstall.file_cleaner import delete_server_directory
+from uninstall.velocity_cleanup import remove_from_velocity_toml
 from pathlib import Path
-import sys
 
-BASE_DIR = Path("/opt/minecraft")
-
-def uninstall_server():
+def main():
     config = load_config()
-    name = input("Name des zu entfernenden Servers: ").strip().lower()
+    servers = list_paper_servers()
 
-    paper_dir = BASE_DIR / f"paper-{name}"
-    velocity_dirs = list(BASE_DIR.glob("velocity-*/velocity.toml"))
+    if not servers:
+        print("❌ Keine Paper-Server gefunden.")
+        return
 
-    if not paper_dir.exists():
-        print(f"❌ Serververzeichnis nicht gefunden: {paper_dir}")
-        sys.exit(1)
+    print("📋 Verfügbare Server:")
+    for i, srv in enumerate(servers):
+        print(f"{i + 1}. {srv}")
 
-    remove_service(name, "paper")
-    remove_server_folder(paper_dir)
+    try:
+        choice = int(input("❓ Welchen Server möchtest du löschen (Nummer): ")) - 1
+        if choice < 0 or choice >= len(servers):
+            print("❌ Ungültige Auswahl.")
+            return
+    except ValueError:
+        print("❌ Ungültige Eingabe.")
+        return
 
-    for toml_path in velocity_dirs:
-        remove_from_velocity_toml(toml_path, name)
+    server_name = servers[choice]
 
-    print(f"✅ Server {name} erfolgreich entfernt.")
+    # Velocity cleanup vorbereiten
+    velocity_name = None
+    velocity_toml = None
+    velocity_path = Path(config["BASE_DIR"])
+    for sub in velocity_path.iterdir():
+        if sub.is_dir() and sub.name.startswith("velocity-"):
+            candidate = sub / "velocity.toml"
+            if candidate.exists():
+                velocity_name = sub.name.replace("velocity-", "")
+                velocity_toml = candidate
+                break
+
+    # Entferne systemd-Service und Serverdateien
+    remove_systemd_service("paper", server_name)
+    delete_server_directory("paper", server_name)
+
+    # Entferne aus velocity.toml falls vorhanden
+    if velocity_toml:
+        remove_from_velocity_toml(velocity_toml, server_name)
+
+    print(f"✅ Server '{server_name}' wurde erfolgreich entfernt.")
 
 if __name__ == "__main__":
-    uninstall_server()
+    main()
