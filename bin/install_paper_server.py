@@ -1,18 +1,24 @@
-# bin/install_paper_server.py
+from paper.config_loader import load_config
+from paper.downloader import download_latest_paper
+from paper.initializer import (
+    start_server_once,
+    apply_eula,
+    start_server_fully_and_stop
+)
+from paper.velocity_detection import detect_velocity
+from paper.input_collector import ask_server_properties
+from paper.property_writer import write_server_properties
+from paper.config import (
+    update_spigot,
+    update_paper_global,
+    update_velocity_toml
+)
+from paper.service_creator import create_systemd_service
+from paper.log_monitor import monitor_log_for_warnings
 
-import time
-import subprocess
 from pathlib import Path
-
-from bin.paper.config_loader import load_config
-from bin.paper.downloader import download_latest_paper
-from bin.paper.initializer import start_server_once, apply_eula, restart_server, run_server_until_generated
-from bin.paper.velocity_detection import detect_velocity
-from bin.paper.input_collector import ask_server_properties
-from bin.paper.property_writer import write_server_properties
-from bin.paper.config import update_spigot, update_paper_global, update_velocity_toml
-from bin.paper.service_creator import create_systemd_service
-from bin.paper.log_monitor import monitor_log_for_warnings
+import subprocess
+import time
 
 BASE_DIR = Path("/opt/minecraft")
 
@@ -26,16 +32,21 @@ def main():
     start_server_once(server_dir)
     apply_eula(server_dir)
     write_server_properties(server_dir, defaults, port, rcon_port, rcon_pass, view_distance, level_name, seed, velocity_secret)
-    run_server_until_generated(server_dir)
+
+    # Jetzt vollständiger Start und Stop
+    start_server_fully_and_stop(server_dir)
+
     update_spigot(server_dir)
-    if velocity_secret and velocity_toml:
+    velocity_online_mode = False
+    if velocity_toml:
         with open(velocity_toml) as f:
-            online_mode = False
             for line in f:
                 if "online-mode" in line and "=" in line:
-                    online_mode = line.strip().split("=")[1].strip().lower() == "true"
+                    velocity_online_mode = line.split("=")[1].strip().lower() == "true"
                     break
-        update_paper_global(server_dir, velocity_secret, online_mode)
+    update_paper_global(server_dir, velocity_secret, velocity_online_mode)
+
+    if velocity_toml:
         update_velocity_toml(velocity_toml, name, port)
 
     create_systemd_service(name, server_dir)
