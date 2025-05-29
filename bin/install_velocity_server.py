@@ -1,12 +1,12 @@
 # install_velocity_server.py
 
 from pathlib import Path
-from velocity.config_loader import load_config
-from velocity.downloader import download_latest_velocity
-from velocity.initializer import start_velocity_once
-from velocity.configurator import apply_velocity_toml
-from velocity.service_creator import create_systemd_service
-from velocity.secret_handler import copy_forwarding_secret
+from bin.velocity.config_loader import load_config
+from bin.velocity.downloader import download_latest_velocity
+from bin.velocity.initializer import start_velocity_once
+from bin.velocity.configurator import apply_velocity_toml
+from bin.velocity.service_creator import create_systemd_service
+from bin.velocity.secret_handler import copy_forwarding_secret
 
 BASE_DIR = Path("/opt/minecraft")
 
