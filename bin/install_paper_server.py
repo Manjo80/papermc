@@ -132,17 +132,31 @@ def update_spigot(server_dir):
             yaml.dump(data, f)
 
 
-def update_paper_global(server_dir, velocity_secret):
+def update_paper_global(server_dir, velocity_secret_path, velocity_online_mode):
     paper_config_path = server_dir / "config" / "paper-global.yml"
-    if paper_config_path.exists():
+    if not paper_config_path.exists():
+        print(f"❌ paper-global.yml nicht gefunden: {paper_config_path}")
+        return
+
+    try:
         with open(paper_config_path, 'r') as f:
             data = yaml.safe_load(f)
-        data['proxies']['velocity']['enabled'] = True
-        data['proxies']['velocity']['secret'] = velocity_secret.read_text().strip()
-        data['proxies']['velocity']['online-mode'] = False
-        with open(paper_config_path, 'w') as f:
-            yaml.dump(data, f)
 
+        if 'proxies' not in data:
+            data['proxies'] = {}
+        if 'velocity' not in data['proxies']:
+            data['proxies']['velocity'] = {}
+
+        data['proxies']['velocity']['enabled'] = True
+        data['proxies']['velocity']['secret'] = Path(velocity_secret_path).read_text().strip()
+        data['proxies']['velocity']['online-mode'] = velocity_online_mode
+
+        with open(paper_config_path, 'w') as f:
+            yaml.dump(data, f, sort_keys=False)
+
+        print("✅ paper-global.yml wurde aktualisiert.")
+    except Exception as e:
+        print(f"❌ Fehler beim Aktualisieren von paper-global.yml: {e}")
 
 def update_velocity_toml(toml_path, server_name, port):
     if toml_path.exists():
