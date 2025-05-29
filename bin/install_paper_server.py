@@ -7,12 +7,14 @@ from pathlib import Path
 from configparser import ConfigParser
 
 BASE_DIR = Path("/opt/minecraft")
-CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "global.conf"
+CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "global.ini"
+
 
 def load_config():
     config = ConfigParser()
     config.read(CONFIG_PATH)
     return config['DEFAULT']
+
 
 def download_latest_paper(target_dir):
     print("➡️  Lade neueste PaperMC-Version herunter...")
@@ -28,13 +30,10 @@ def download_latest_paper(target_dir):
         f.write(r.content)
     return jar_path
 
+
 def start_server_once(server_dir):
-    process = subprocess.Popen(
-        ["java", "-Xmx512M", "-Xms512M", "-jar", "paper.jar", "nogui"],
-        cwd=server_dir,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT
-    )
+    print("➡️  Starte Server zum Erzeugen der Dateien...")
+    process = subprocess.Popen(["java", "-Xmx512M", "-Xms512M", "-jar", "paper.jar", "nogui"], cwd=server_dir, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     eula_seen = False
     for line in process.stdout:
         decoded = line.decode(errors="ignore").strip()
@@ -42,32 +41,57 @@ def start_server_once(server_dir):
         if "eula" in decoded.lower():
             eula_seen = True
             break
-    time.sleep(5)
-    process.terminate()
-    process.wait()
-    if not eula_seen:
+    if eula_seen:
+        time.sleep(5)
+        process.terminate()
+        process.wait()
+    else:
+        process.terminate()
+        process.wait()
         raise RuntimeError("EULA-Meldung wurde nicht erkannt")
+
 
 def apply_eula(server_dir):
     print("➡️  Akzeptiere EULA...")
     with open(server_dir / "eula.txt", "w") as f:
         f.write("eula=true\n")
 
+
+def detect_velocity():
+    for svc in os.listdir("/etc/systemd/system"):
+        if svc.startswith("velocity-") and svc.endswith(".service"):
+            name = svc.replace("velocity-", "").replace(".service", "")
+            dir_path = BASE_DIR / f"velocity-{name}"
+            toml = dir_path / "velocity.toml"
+            secret = BASE_DIR / "forwarding.secret"
+            if toml.exists() and secret.exists():
+                return name, dir_path, toml, secret
+    return None, None, None, None
+
+
 def ask_server_properties(defaults):
     name = input("Servername: ").strip().lower()
-    port = input(f"Port [{defaults['DEFAULT_PAPER_PORT']}]: ") or defaults['DEFAULT_PAPER_PORT']
-    rcon_port = input(f"RCON Port [{defaults['DEFAULT_RCON_PORT']}]: ") or defaults['DEFAULT_RCON_PORT']
-    rcon_pass = input("RCON Passwort: ")
+    velocity_name, velocity_dir, velocity_toml, velocity_secret = detect_velocity()
+    if velocity_toml:
+        with open(velocity_toml) as f:
+            for line in f:
+                if line.strip().startswith("port"):
+                    port = int(line.strip().split("=")[1]) + 1
+                    rcon_port = port + 1
+                    break
+    else:
+        port = int(defaults['DEFAULT_PAPER_PORT'])
+        rcon_port = int(defaults['DEFAULT_RCON_PORT'])
+
+    rcon_pass = input("RCON Passwort: ") if not velocity_secret else None
     view_distance = input(f"View Distance [{defaults['DEFAULT_VIEW_DISTANCE']}]: ") or defaults['DEFAULT_VIEW_DISTANCE']
     level_name = input("Level Name [world]: ") or "world"
     seed = input("Seed (leer für zufällig): ")
-    mode = input("Standalone oder Velocity? (s/v): ").strip().lower()
-    proxy_secret = ""
-    if mode == "v":
-        proxy_secret = input("Velocity Forwarding Secret: ")
-    return name, port, rcon_port, rcon_pass, view_distance, level_name, seed, mode, proxy_secret
+    mode = "v" if velocity_secret else "s"
+    return name, str(port), str(rcon_port), rcon_pass, view_distance, level_name, seed, mode, velocity_secret
 
-def write_server_properties(server_dir, defaults, port, rcon_port, rcon_pass, view_distance, level_name, seed):
+
+def write_server_properties(server_dir, defaults, port, rcon_port, rcon_pass, view_distance, level_name, seed, velocity_secret):
     print("➡️  Schreibe server.properties...")
     props = f"""
 server-port={port}
@@ -89,10 +113,14 @@ enable-command-block=true
 online-mode=false
 enable-rcon=true
 rcon.port={rcon_port}
-rcon.password={rcon_pass}
 """
+    if velocity_secret:
+        props += f"velocity-support-forwarding-secret-file=../forwarding.secret\n"
+    else:
+        props += f"rcon.password={rcon_pass}\n"
     with open(server_dir / "server.properties", "w") as f:
         f.write(props.strip() + "\n")
+
 
 def create_systemd_service(name, server_dir):
     print("➡️  Erstelle systemd Service...")
@@ -117,6 +145,7 @@ WantedBy=multi-user.target
     subprocess.run(["systemctl", "enable", f"paper-{name}"])
     subprocess.run(["systemctl", "start", f"paper-{name}"])
 
+
 def monitor_log_for_warnings(server_dir):
     print("➡️  Überwache Logs auf Fehler oder Warnungen...")
     log_file = server_dir / "logs" / "latest.log"
@@ -126,17 +155,17 @@ def monitor_log_for_warnings(server_dir):
                 if any(w in line for w in ["[ERROR]", "[WARN]"]):
                     print(line.strip())
 
+
 def main():
     defaults = load_config()
-    name, port, rcon_port, rcon_pass, view_distance, level_name, seed, mode, proxy_secret = ask_server_properties(defaults)
+    name, port, rcon_port, rcon_pass, view_distance, level_name, seed, mode, velocity_secret = ask_server_properties(defaults)
     server_dir = BASE_DIR / f"paper-{name}"
     server_dir.mkdir(parents=True, exist_ok=True)
 
     download_latest_paper(server_dir)
-    print("➡️  Starte Server zum Erzeugen der Dateien...")
     start_server_once(server_dir)
     apply_eula(server_dir)
-    write_server_properties(server_dir, defaults, port, rcon_port, rcon_pass, view_distance, level_name, seed)
+    write_server_properties(server_dir, defaults, port, rcon_port, rcon_pass, view_distance, level_name, seed, velocity_secret)
     create_systemd_service(name, server_dir)
 
     print("➡️  Starte Server erneut, um vollständige Konfiguration zu erzeugen...")
