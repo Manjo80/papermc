@@ -1,20 +1,20 @@
-from config_loader import load_config
-from downloader import download_latest_paper
-from initializer import (
+from paper.config_loader import load_config
+from paper.downloader import download_latest_paper
+from paper.initializer import (
     start_server_once,
     apply_eula,
     start_server_fully_and_stop
 )
-from velocity_detection import detect_velocity
-from input_collector import ask_server_properties
-from property_writer import write_server_properties
-from config import (
+from paper.velocity_detection import detect_velocity
+from paper.input_collector import ask_server_properties
+from paper.property_writer import write_server_properties
+from paper.config import (
     update_spigot,
     update_paper_global,
     update_velocity_toml
 )
-from service_creator import create_systemd_service
-from log_monitor import monitor_log_for_warnings
+from paper.service_creator import create_systemd_service
+from paper.log_monitor import monitor_log_for_warnings
 
 from pathlib import Path
 import subprocess
