@@ -2,7 +2,7 @@
 
 from .config_loader import load_config
 from .downloader import download_latest_paper
-from .initializer import start_server_once, apply_eula, run_server_once
+from .initializer import start_server_once, apply_eula, run_server_once, run_server_until_generated
 from .velocity_detection import detect_velocity
 from .input_collector import ask_server_properties
 from .property_writer import write_server_properties
