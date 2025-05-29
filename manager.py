@@ -1,8 +1,17 @@
 import os
-from bin.install_paper_server import main as install_paper_server
-from bin.install_velocity_server import main as install_velocity_server
-from bin.uninstall_server import main as uninstall_server
-#from bin.open_rcon_terminal import main as open_rcon_terminal  # falls noch nicht vorhanden, musst du diese Datei erstellen
+import sys
+
+# Stelle sicher, dass das bin-Verzeichnis zum sys.path hinzugefügt wird
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BIN_DIR = os.path.join(BASE_DIR, "bin")
+sys.path.insert(0, BIN_DIR)
+
+# Imports der Hauptfunktionen aus den Unterordnern
+from paper.install_paper_server import main as install_paper_server
+from velocity.install_velocity_server import main as install_velocity_server
+from uninstall.uninstall_server import main as uninstall_server
+# Optional: Implementiere dies später
+# from rcon.open_rcon_terminal import main as open_rcon_terminal  
 
 def show_menu():
     while True:
@@ -13,7 +22,7 @@ def show_menu():
         print("3. Bestehenden Server deinstallieren")
         print("4. RCON-Terminal öffnen")
         print("5. Beenden")
-        choice = input("> ")
+        choice = input("> ").strip()
 
         if choice == "1":
             install_paper_server()
@@ -22,7 +31,9 @@ def show_menu():
         elif choice == "3":
             uninstall_server()
         elif choice == "4":
-            open_rcon_terminal()
+            print("❌ RCON-Terminal noch nicht implementiert.")
+            input("Weiter mit Enter...")
+            # open_rcon_terminal()
         elif choice == "5":
             break
         else:
@@ -30,4 +41,5 @@ def show_menu():
             input("Weiter mit Enter...")
 
 if __name__ == "__main__":
+    print("🚀 Starte Manager...")
     show_menu()
