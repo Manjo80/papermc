@@ -42,3 +42,32 @@ def run_server_once(server_dir, seconds=30):
         process.terminate()
         process.wait()
         print("✅ Server wurde beendet.")
+
+def run_server_until_generated(server_dir: Path, timeout: int = 60):
+    print("➡️  Starte Server bis alle Konfigurationsdateien erstellt sind...")
+    paper_global_path = server_dir / "config" / "paper-global.yml"
+
+    process = subprocess.Popen(
+        ["java", "-Xmx512M", "-Xms512M", "-jar", "paper.jar", "nogui"],
+        cwd=server_dir,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT
+    )
+
+    start_time = time.time()
+    try:
+        while time.time() - start_time < timeout:
+            if paper_global_path.exists():
+                print("✅ paper-global.yml wurde erstellt.")
+                break
+            time.sleep(1)
+        else:
+            print("⚠️ Timeout erreicht – Datei wurde nicht gefunden, Server wird gestoppt.")
+    finally:
+        process.terminate()
+        try:
+            process.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            print("❌ Server musste hart beendet werden.")
+        print("✅ Server gestoppt.")
