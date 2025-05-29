@@ -7,14 +7,12 @@ from pathlib import Path
 from configparser import ConfigParser
 
 BASE_DIR = Path("/opt/minecraft")
-CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "global.conf"
-
+CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "global.ini"
 
 def load_config():
     config = ConfigParser()
     config.read(CONFIG_PATH)
     return config['DEFAULT']
-
 
 def download_latest_paper(target_dir):
     print("➡️  Lade neueste PaperMC-Version herunter...")
@@ -29,7 +27,6 @@ def download_latest_paper(target_dir):
     with open(jar_path, 'wb') as f:
         f.write(r.content)
     return jar_path
-
 
 def start_server_once(server_dir):
     print("➡️  Starte Server zum Erzeugen der Dateien...")
@@ -50,12 +47,10 @@ def start_server_once(server_dir):
         process.wait()
         raise RuntimeError("EULA-Meldung wurde nicht erkannt")
 
-
 def apply_eula(server_dir):
     print("➡️  Akzeptiere EULA...")
     with open(server_dir / "eula.txt", "w") as f:
         f.write("eula=true\n")
-
 
 def detect_velocity():
     for svc in os.listdir("/etc/systemd/system"):
@@ -67,7 +62,6 @@ def detect_velocity():
             if toml.exists() and secret.exists():
                 return name, dir_path, toml, secret
     return None, None, None, None
-
 
 def ask_server_properties(defaults):
     name = input("Servername: ").strip().lower()
@@ -88,8 +82,7 @@ def ask_server_properties(defaults):
     level_name = input("Level Name [world]: ") or "world"
     seed = input("Seed (leer für zufällig): ")
     mode = "v" if velocity_secret else "s"
-    return name, str(port), str(rcon_port), rcon_pass, view_distance, level_name, seed, mode, velocity_secret
-
+    return name, str(port), str(rcon_port), rcon_pass, view_distance, level_name, seed, mode, velocity_secret, velocity_toml, velocity_name
 
 def write_server_properties(server_dir, defaults, port, rcon_port, rcon_pass, view_distance, level_name, seed, velocity_secret):
     print("➡️  Schreibe server.properties...")
@@ -121,6 +114,50 @@ rcon.port={rcon_port}
     with open(server_dir / "server.properties", "w") as f:
         f.write(props.strip() + "\n")
 
+def patch_paper_global(server_dir):
+    config_path = server_dir / "config" / "paper-global.yml"
+    if not config_path.exists():
+        return
+    with open(config_path, "r") as f:
+        lines = f.readlines()
+    new_lines = []
+    in_section = False
+    for line in lines:
+        if line.strip().startswith("velocity-support:"):
+            in_section = True
+            new_lines.append(line)
+            continue
+        if in_section and not line.startswith(" "):
+            new_lines.append("  enabled: true\n")
+            new_lines.append("  online-mode: true\n")
+            new_lines.append("  secret-file: ../forwarding.secret\n")
+            in_section = False
+        new_lines.append(line)
+    if in_section:
+        new_lines.append("  enabled: true\n")
+        new_lines.append("  online-mode: true\n")
+        new_lines.append("  secret-file: ../forwarding.secret\n")
+    with open(config_path, "w") as f:
+        f.writelines(new_lines)
+
+def patch_velocity_toml(toml_path, server_name, server_port):
+    with open(toml_path, "r") as f:
+        lines = f.readlines()
+    new_lines = []
+    found_servers = False
+    for line in lines:
+        if line.strip().startswith("[servers]"):
+            found_servers = True
+            new_lines.append(line)
+            new_lines.append(f"{server_name} = \"127.0.0.1:{server_port}\"\n")
+            continue
+        if found_servers and line.strip().startswith("["):
+            if input("Soll dieser Server als Standardziel in Velocity eingetragen werden? (j/n): ").lower() == "j":
+                new_lines.append(f"try = [ \"{server_name}\" ]\n")
+            found_servers = False
+        new_lines.append(line)
+    with open(toml_path, "w") as f:
+        f.writelines(new_lines)
 
 def create_systemd_service(name, server_dir):
     print("➡️  Erstelle systemd Service...")
@@ -145,7 +182,6 @@ WantedBy=multi-user.target
     subprocess.run(["systemctl", "enable", f"paper-{name}"])
     subprocess.run(["systemctl", "start", f"paper-{name}"])
 
-
 def monitor_log_for_warnings(server_dir):
     print("➡️  Überwache Logs auf Fehler oder Warnungen...")
     log_file = server_dir / "logs" / "latest.log"
@@ -155,19 +191,19 @@ def monitor_log_for_warnings(server_dir):
                 if any(w in line for w in ["[ERROR]", "[WARN]"]):
                     print(line.strip())
 
-
 def main():
     defaults = load_config()
-    name, port, rcon_port, rcon_pass, view_distance, level_name, seed, mode, velocity_secret = ask_server_properties(defaults)
+    name, port, rcon_port, rcon_pass, view_distance, level_name, seed, mode, velocity_secret, velocity_toml, velocity_name = ask_server_properties(defaults)
     server_dir = BASE_DIR / f"paper-{name}"
     server_dir.mkdir(parents=True, exist_ok=True)
-
     download_latest_paper(server_dir)
     start_server_once(server_dir)
     apply_eula(server_dir)
     write_server_properties(server_dir, defaults, port, rcon_port, rcon_pass, view_distance, level_name, seed, velocity_secret)
+    patch_paper_global(server_dir)
+    if velocity_toml:
+        patch_velocity_toml(velocity_toml, name, port)
     create_systemd_service(name, server_dir)
-
     print("➡️  Starte Server erneut, um vollständige Konfiguration zu erzeugen...")
     subprocess.run(["systemctl", "restart", f"paper-{name}"])
     time.sleep(30)
