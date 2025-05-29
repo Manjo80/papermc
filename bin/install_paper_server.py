@@ -32,6 +32,7 @@ def main():
     start_server_once(server_dir)
     apply_eula(server_dir)
     write_server_properties(server_dir, defaults, port, rcon_port, rcon_pass, view_distance, level_name, seed, velocity_secret)
+    run_server_once(server_dir)
     update_spigot(server_dir)
     if velocity_secret and velocity_toml:
         with open(velocity_toml) as f:
