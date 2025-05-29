@@ -27,3 +27,18 @@ def apply_eula(server_dir: Path):
     print("➡️  Akzeptiere EULA...")
     with open(server_dir / "eula.txt", "w") as f:
         f.write("eula=true\n")
+
+import subprocess
+import time
+
+def run_server_once(server_dir, seconds=30):
+    print("➡️  Starte Server einmal vollständig zum Generieren aller Dateien...")
+    process = subprocess.Popen(["java", "-Xmx512M", "-Xms512M", "-jar", "paper.jar", "nogui"],
+                               cwd=server_dir, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
+    try:
+        time.sleep(seconds)  # kurze Laufzeit reicht normalerweise, um alle Dateien zu erzeugen
+    finally:
+        process.terminate()
+        process.wait()
+        print("✅ Server wurde beendet.")
