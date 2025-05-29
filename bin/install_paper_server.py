@@ -9,12 +9,10 @@ import yaml
 BASE_DIR = Path("/opt/minecraft")
 CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "global.conf"
 
-
 def load_config():
     config = ConfigParser()
     config.read(CONFIG_PATH)
     return config['DEFAULT']
-
 
 def download_latest_paper(target_dir):
     print("➡️  Lade neueste PaperMC-Version herunter...")
@@ -29,7 +27,6 @@ def download_latest_paper(target_dir):
     with open(jar_path, 'wb') as f:
         f.write(r.content)
     return jar_path
-
 
 def start_server_once(server_dir):
     print("➡️  Starte Server zum Erzeugen der Dateien...")
@@ -50,12 +47,10 @@ def start_server_once(server_dir):
         process.wait()
         raise RuntimeError("EULA-Meldung wurde nicht erkannt")
 
-
 def apply_eula(server_dir):
     print("➡️  Akzeptiere EULA...")
     with open(server_dir / "eula.txt", "w") as f:
         f.write("eula=true\n")
-
 
 def detect_velocity():
     for svc in os.listdir("/etc/systemd/system"):
@@ -67,7 +62,6 @@ def detect_velocity():
             if toml.exists() and secret.exists():
                 return name, dir_path, toml, secret
     return None, None, None, None
-
 
 def ask_server_properties(defaults):
     name = input("Servername: ").strip().lower()
@@ -88,8 +82,16 @@ def ask_server_properties(defaults):
     level_name = input("Level Name [world]: ") or "world"
     seed = input("Seed (leer für zufällig): ")
     mode = "v" if velocity_secret else "s"
-    return name, str(port), str(rcon_port), rcon_pass, view_distance, level_name, seed, mode, velocity_secret, velocity_toml, velocity_name
 
+    velocity_online_mode = False
+    if velocity_toml and velocity_toml.exists():
+        with open(velocity_toml) as f:
+            for line in f:
+                if line.strip().startswith("online-mode"):
+                    velocity_online_mode = line.strip().split("=")[1].strip().lower() == "true"
+                    break
+
+    return name, str(port), str(rcon_port), rcon_pass, view_distance, level_name, seed, mode, velocity_secret, velocity_toml, velocity_name, velocity_online_mode
 
 def write_server_properties(server_dir, defaults, port, rcon_port, rcon_pass, view_distance, level_name, seed, velocity_secret):
     print("➡️  Schreibe server.properties...")
@@ -121,7 +123,6 @@ rcon.port={rcon_port}
     with open(server_dir / "server.properties", "w") as f:
         f.write(props.strip() + "\n")
 
-
 def update_spigot(server_dir):
     spigot_path = server_dir / "spigot.yml"
     if spigot_path.exists():
@@ -130,7 +131,6 @@ def update_spigot(server_dir):
         data['settings']['bungeecord'] = False
         with open(spigot_path, 'w') as f:
             yaml.dump(data, f)
-
 
 def update_paper_global(server_dir, velocity_secret_path, velocity_online_mode):
     paper_config_path = server_dir / "config" / "paper-global.yml"
@@ -175,7 +175,6 @@ def update_velocity_toml(toml_path, server_name, port):
         new_lines.append(f"{server_name} = \"127.0.0.1:{port}\"")
         toml_path.write_text("\n".join(new_lines) + "\n")
 
-
 def create_systemd_service(name, server_dir):
     print("➡️  Erstelle systemd Service...")
     service_file = f"/etc/systemd/system/paper-{name}.service"
@@ -199,7 +198,6 @@ WantedBy=multi-user.target
     subprocess.run(["systemctl", "enable", f"paper-{name}"])
     subprocess.run(["systemctl", "start", f"paper-{name}"])
 
-
 def monitor_log_for_warnings(server_dir):
     print("➡️  Überwache Logs auf Fehler oder Warnungen...")
     log_file = server_dir / "logs" / "latest.log"
@@ -209,10 +207,9 @@ def monitor_log_for_warnings(server_dir):
                 if any(w in line for w in ["[ERROR]", "[WARN]"]):
                     print(line.strip())
 
-
 def main():
     defaults = load_config()
-    name, port, rcon_port, rcon_pass, view_distance, level_name, seed, mode, velocity_secret, velocity_toml, velocity_name = ask_server_properties(defaults)
+    name, port, rcon_port, rcon_pass, view_distance, level_name, seed, mode, velocity_secret, velocity_toml, velocity_name, velocity_online_mode = ask_server_properties(defaults)
     server_dir = BASE_DIR / f"paper-{name}"
     server_dir.mkdir(parents=True, exist_ok=True)
 
@@ -221,7 +218,7 @@ def main():
     apply_eula(server_dir)
     write_server_properties(server_dir, defaults, port, rcon_port, rcon_pass, view_distance, level_name, seed, velocity_secret)
     update_spigot(server_dir)
-    update_paper_global(server_dir, velocity_secret)
+    update_paper_global(server_dir, velocity_secret, velocity_online_mode)
     if velocity_toml:
         update_velocity_toml(velocity_toml, name, port)
 
@@ -231,7 +228,6 @@ def main():
     subprocess.run(["systemctl", "restart", f"paper-{name}"])
     time.sleep(30)
     monitor_log_for_warnings(server_dir)
-
 
 if __name__ == "__main__":
     main()
