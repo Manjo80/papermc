@@ -1,8 +1,10 @@
 from paper.config_loader import load_config
 from paper.downloader import download_latest_paper
 from paper.initializer import (
-    start_server_once,
     apply_eula,
+    run_server_once,
+    run_server_until_generated,
+    start_server_once,
     start_server_fully_and_stop
 )
 from paper.velocity_detection import detect_velocity
