@@ -4,22 +4,15 @@ import time
 import subprocess
 from pathlib import Path
 
-from paper import (
-    load_config,
-    download_latest_paper,
-    start_server_once,
-    apply_eula,
-    detect_velocity,
-    ask_server_properties,
-    write_server_properties,
-    update_spigot,
-    update_paper_global,
-    update_velocity_toml,
-    create_systemd_service,
-    monitor_log_for_warnings,
-    run_server_once,
-    run_server_until_generated,
-)
+from bin.paper.config_loader import load_config
+from bin.paper.downloader import download_latest_paper
+from bin.paper.initializer import start_server_once, apply_eula, restart_server, run_server_until_generated
+from bin.paper.velocity_detection import detect_velocity
+from bin.paper.input_collector import ask_server_properties
+from bin.paper.property_writer import write_server_properties
+from bin.paper.config import update_spigot, update_paper_global, update_velocity_toml
+from bin.paper.service_creator import create_systemd_service
+from bin.paper.log_monitor import monitor_log_for_warnings
 
 BASE_DIR = Path("/opt/minecraft")
 
