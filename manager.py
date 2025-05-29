@@ -1,14 +1,14 @@
 import os
 import sys
 
-# Importpfad um bin/ erweitern
+# bin-Verzeichnis zur Modul-Suche hinzufügen
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "bin"))
 
-# Importiere Hauptfunktionen
+# Imports aus den Unterpaketen
 from paper.install_paper_server import main as install_paper_server
 from velocity.install_velocity_server import main as install_velocity_server
 from uninstall.uninstall_server import main as uninstall_server
-# from rcon.open_rcon_terminal import main as open_rcon_terminal  # Optional, wenn später benötigt
+# from bin.open_rcon_terminal import main as open_rcon_terminal  # optional
 
 def show_menu():
     while True:
@@ -28,9 +28,8 @@ def show_menu():
         elif choice == "3":
             uninstall_server()
         elif choice == "4":
-            print("❌ RCON-Funktion ist noch nicht implementiert.")
+            print("❌ RCON-Terminal noch nicht implementiert.")
             input("Weiter mit Enter...")
-            # open_rcon_terminal()
         elif choice == "5":
             break
         else:
