@@ -7,7 +7,7 @@ from pathlib import Path
 from configparser import ConfigParser
 
 BASE_DIR = Path("/opt/minecraft")
-CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "global.ini"
+CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "global.conf"
 
 
 def load_config():
