@@ -1,22 +1,42 @@
-from uninstall.service_remover import remove_service
-from uninstall.directory_cleaner import remove_server_directory
-from uninstall.velocity_cleaner import remove_velocity_entry
-from uninstall.file_cleaner import remove_server_files
+# bin/uninstall_server.py
+
+from uninstall.config_loader import load_config
+from uninstall.server_finder import list_paper_servers
+from uninstall.service_remover import remove_systemd_service
+from uninstall.file_cleaner import delete_server_directory
+from uninstall.velocity_cleanup import remove_from_velocity_toml
 
 def main():
-    name = input("➡️  Name des Servers zum Entfernen: ").strip().lower()
-    
-    print("🛑 Stoppe und entferne systemd-Dienst...")
-    remove_service(name)
+    config = load_config()
+    base_dir = config['BASE_DIR']
 
-    print("🧹 Lösche Serververzeichnis und paper.jar...")
-    remove_server_files(name)
-    remove_server_directory(name)
+    print("🔍 Suche nach installierten PaperMC-Servern...")
+    servers = list_paper_servers(base_dir)
 
-    print("🧽 Entferne Servereintrag aus velocity.toml (falls vorhanden)...")
-    remove_velocity_entry(name)
+    if not servers:
+        print("❌ Keine Server gefunden.")
+        return
 
-    print("✅ Server erfolgreich entfernt.")
+    print("\n📋 Verfügbare Server:")
+    for i, name in enumerate(servers, start=1):
+        print(f"{i}. {name}")
+
+    try:
+        choice = int(input("\n🗑 Welchen Server möchtest du entfernen? (Nummer): "))
+        if not (1 <= choice <= len(servers)):
+            raise ValueError()
+    except ValueError:
+        print("❌ Ungültige Auswahl.")
+        return
+
+    selected_server = servers[choice - 1]
+    print(f"\n⚠️  Der Server '{selected_server}' wird jetzt entfernt...")
+
+    remove_systemd_service(selected_server)
+    delete_server_directory(base_dir, selected_server)
+    remove_from_velocity_toml(base_dir, selected_server)
+
+    print(f"\n✅ Server '{selected_server}' wurde vollständig entfernt.")
 
 if __name__ == "__main__":
     main()
