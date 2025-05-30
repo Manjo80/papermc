@@ -10,7 +10,7 @@ from velocity.service_creator import create_systemd_service
 import os
 
 def main():
-    base_dir = Path("/opt/papermc/servers")
+    base_dir = Path("/opt/minecraft")
     base_dir.mkdir(parents=True, exist_ok=True)
 
     server_name = input("➡️  Name des Velocity-Proxys: ").strip()
