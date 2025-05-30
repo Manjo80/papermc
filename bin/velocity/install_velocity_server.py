@@ -3,7 +3,7 @@
 from pathlib import Path
 from velocity.downloader import download_latest_velocity
 from velocity.initializer import start_velocity_once
-from velocity.secret_handler import create_secret
+from velocity.secret_handler import copy_forwarding_secret
 from velocity.configurator import configure_velocity_toml
 from velocity.config_loader import load_velocity_config
 from velocity.service_creator import create_velocity_service
@@ -32,7 +32,7 @@ def main():
     start_velocity_once(server_dir)
 
     # Secret erstellen
-    secret_path = create_secret(server_dir)
+    secret_path = copy_forwarding_secret(server_dir: Path)
 
     # Konfiguration vorbereiten
     configure_velocity_toml(server_dir, secret_path.read_text().strip(), server_name)
