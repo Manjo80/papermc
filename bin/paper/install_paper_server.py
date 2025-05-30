@@ -1,62 +1,83 @@
-from paper.config_loader import load_config
-from paper.downloader import download_latest_paper
-from paper.initializer import (
-    apply_eula,
-    run_server_once,
-    run_server_until_generated,
-    start_server_once,
-    start_server_fully_and_stop
-)
-from paper.velocity_detection import detect_velocity
-from paper.input_collector import ask_server_properties
-from paper.property_writer import write_server_properties
-from paper.config import (
-    update_spigot,
-    update_paper_global,
-    update_velocity_toml
-)
-from paper.service_creator import create_systemd_service
-from paper.log_monitor import monitor_log_for_warnings
-
-from pathlib import Path
+import os
 import subprocess
-import time
+from pathlib import Path
+from paper.downloader import download_latest_paper
+from paper.logwatcher import wait_for_log_message
+from paper.server_properties_editor import update_server_properties
+from paper.configurator import apply_paper_configs
+from paper.velocity_linker import find_velocity_servers, get_forwarding_secret
+from velocity.config_loader import load_config
 
-BASE_DIR = Path("/opt/minecraft")
 
 def main():
-    defaults = load_config()
-    name, port, rcon_port, rcon_pass, view_distance, level_name, seed, mode, velocity_secret, velocity_toml, velocity_name = ask_server_properties(defaults)
-    server_dir = BASE_DIR / f"paper-{name}"
-    server_dir.mkdir(parents=True, exist_ok=True)
+    base_dir = Path("/opt/minecraft")
+    base_dir.mkdir(parents=True, exist_ok=True)
 
-    download_latest_paper(server_dir)
-    start_server_once(server_dir)
-    apply_eula(server_dir)
-    write_server_properties(server_dir, defaults, port, rcon_port, rcon_pass, view_distance, level_name, seed, velocity_secret)
+    server_name = input("➡️  Name des Paper-Servers: ").strip()
+    if not server_name:
+        print("❌ Kein Servername eingegeben.")
+        return
 
-    # Jetzt vollständiger Start und Stop
-    start_server_fully_and_stop(server_dir)
+    server_dir = base_dir / server_name
+    if server_dir.exists():
+        print("❌ Ein Server mit diesem Namen existiert bereits.")
+        return
+    server_dir.mkdir()
 
-    update_spigot(server_dir)
-    velocity_online_mode = False
-    if velocity_toml:
-        with open(velocity_toml) as f:
-            for line in f:
-                if "online-mode" in line and "=" in line:
-                    velocity_online_mode = line.split("=")[1].strip().lower() == "true"
-                    break
-    update_paper_global(server_dir, velocity_secret, velocity_online_mode)
+    # Frage, ob mit Velocity verbunden werden soll
+    use_velocity = input("➡️  Mit Velocity verbinden? (j/n): ").strip().lower() == 'j'
+    velocity_secret = None
+    if use_velocity:
+        velocity_servers = find_velocity_servers(base_dir)
+        if not velocity_servers:
+            print("❌ Keine Velocity-Server gefunden.")
+            return
+        print("➡️  Verfügbare Velocity-Server:")
+        for i, v_path in enumerate(velocity_servers):
+            print(f"[{i}] {v_path.name}")
+        choice = input("➡️  Nummer des Velocity-Servers: ").strip()
+        try:
+            choice_idx = int(choice)
+            selected_velocity = velocity_servers[choice_idx]
+            velocity_secret = get_forwarding_secret(selected_velocity)
+        except (IndexError, ValueError):
+            print("❌ Ungültige Auswahl.")
+            return
 
-    if velocity_toml:
-        update_velocity_toml(velocity_toml, name, port)
+    # Lade PaperMC
+    jar_path = download_latest_paper(server_dir)
 
-    create_systemd_service(name, server_dir)
+    # Starte Server einmal bis EULA erscheint
+    print("➡️  Starte Server zum Initialisieren...")
+    proc = subprocess.Popen(["java", "-jar", jar_path.name], cwd=server_dir)
+    wait_for_log_message(server_dir / "logs" / "latest.log", "You have not accepted the EULA")
+    proc.terminate()
 
-    print("➡️  Starte Server erneut, um vollständige Konfiguration zu erzeugen...")
-    subprocess.run(["systemctl", "restart", f"paper-{name}"])
-    time.sleep(30)
-    monitor_log_for_warnings(server_dir)
+    # EULA akzeptieren
+    eula_path = server_dir / "eula.txt"
+    with eula_path.open("w") as f:
+        f.write("eula=true\n")
 
-if __name__ == "__main__":
-    main()
+    # Lade Konfiguration
+    config = load_config("PAPER")
+
+    # Passe server.properties an
+    update_server_properties(server_dir, config)
+
+    # Starte erneut, um spigot.yml und paper-global zu generieren
+    print("➡️  Starte Server zur Generierung weiterer Dateien...")
+    proc = subprocess.Popen(["java", "-jar", jar_path.name], cwd=server_dir)
+    wait_for_log_message(server_dir / "logs" / "latest.log", "Done")
+    proc.terminate()
+
+    # Passe spigot.yml und paper-global.yml an
+    apply_paper_configs(server_dir, config)
+
+    # Wenn Velocity genutzt wird, Server in velocity.toml eintragen
+    if use_velocity and selected_velocity:
+        from velocity.toml_editor import add_server_to_velocity_config
+        add_server_to_velocity_config(selected_velocity, server_name, config.get("default_port", "25565"))
+
+    print("✅ Paper-Server wurde erfolgreich installiert.")
+    print(f"➡️  Serververzeichnis: {server_dir}")
+    print(f"➡️  Startbefehl: java -Xmx{config.get('default_max_ram', '2G')} -Xms{config.get('default_min_ram', '512M')} -jar {jar_path.name}")
