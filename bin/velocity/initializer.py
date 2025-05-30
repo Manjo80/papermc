@@ -4,7 +4,7 @@ import subprocess
 import time
 from pathlib import Path
 
-def start_velocity_once(server_dir: Path, timeout: int = 60):
+def start_velocity_until_config_created(server_dir: Path, timeout: int = 60):
     """
     Startet den Velocity-Server und wartet, bis sowohl velocity.toml als auch forwarding.secret erstellt wurden.
     """
