@@ -1,5 +1,3 @@
-# velocity/config_loader.py
-
 from configparser import ConfigParser
 from pathlib import Path
 
