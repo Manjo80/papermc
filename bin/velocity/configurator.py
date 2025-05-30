@@ -2,41 +2,30 @@ from pathlib import Path
 from velocity.config_loader import load_config
 
 def apply_velocity_toml(server_dir: Path):
-    config = load_config("VELOCITY")  # Gibt ein dict zurück
+    config = load_config("VELOCITY")
     toml_path = server_dir / "velocity.toml"
 
     with open(toml_path, 'r') as f:
         lines = f.readlines()
 
     new_lines = []
-    in_section = None
-
     for line in lines:
         stripped = line.strip()
-        if stripped.startswith("["):
-            section = stripped.strip("[]")
-            in_section = section
-            new_lines.append(line)
-            continue
-
-        key_value = stripped.split("=", 1)
-        if len(key_value) == 2:
-            key = key_value[0].strip()
+        if "=" in stripped and not stripped.startswith("#") and not stripped.startswith("["):
+            key, _ = stripped.split("=", 1)
+            key = key.strip()
             if key in config:
-                value = config[key]
-                # Automatisch Strings quoten
-                if not value.lower() in ["true", "false"] and not value.isdigit():
-                    value = f'"{value}"'
-                new_lines.append(f"{key} = {value}\n")
+                new_lines.append(f"{key} = {config[key]}\n")
             else:
                 new_lines.append(line)
         else:
             new_lines.append(line)
 
-    # Platzhalter für [servers] und [forced-hosts] erzwingen
-    if "[servers]" not in "".join(new_lines):
+    # Platzhalter für [servers] und [forced-hosts] erzwingen, falls sie fehlen
+    full_text = "".join(new_lines)
+    if "[servers]" not in full_text:
         new_lines.append("\n[servers]\n# Platzhalter\n")
-    if "[forced-hosts]" not in "".join(new_lines):
+    if "[forced-hosts]" not in full_text:
         new_lines.append("\n[forced-hosts]\n# Platzhalter\n")
 
     with open(toml_path, 'w') as f:
