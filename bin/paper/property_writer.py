@@ -1,3 +1,5 @@
+# paper/server_properties_editor.py
+
 from pathlib import Path
 
 def write_server_properties(server_dir, defaults, port, rcon_port, rcon_pass, view_distance, level_name, seed, velocity_secret):
