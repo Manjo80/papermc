@@ -1,5 +1,4 @@
 from pathlib import Path
-from velocity.config_loader import load_config
 
 def apply_velocity_toml(server_dir: Path):
     config = load_config("VELOCITY")  # Gibt ein dict zurück
