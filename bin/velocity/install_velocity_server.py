@@ -6,7 +6,7 @@ from velocity.initializer import start_velocity_once
 from velocity.secret_handler import copy_forwarding_secret
 from velocity.configurator import apply_velocity_toml
 from velocity.config_loader import load_config
-from velocity.service_creator import create_service
+from velocity.service_creator import create_systemd_service
 import os
 
 def main():
@@ -38,7 +38,7 @@ def main():
     apply_velocity_toml(server_dir, secret_path.read_text().strip(), server_name)
 
     # Systemd-Service einrichten
-    create_service(server_name, server_dir)
+    create_systemd_service(server_name, server_dir)
 
     # Konfiguration anzeigen
     print("✅ Velocity-Proxy erfolgreich installiert.")
