@@ -6,7 +6,7 @@ from pathlib import Path
 
 from paper.downloader import download_latest_paper
 from paper.log_monitor import wait_for_log_message
-from paper.property_writer import update_server_properties
+from paper.property_writer import write_server_properties
 from paper.config import apply_paper_configs
 from paper.velocity_detection import find_velocity_servers, get_forwarding_secret
 from paper.service_creator import create_systemd_service
