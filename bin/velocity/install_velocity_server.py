@@ -1,5 +1,5 @@
 from velocity.config_loader import load_config
-from velocity.downloader import download_velocity_jar
+from velocity.downloader import download_latest_velocity
 from velocity.initializer import initialize_velocity_config
 from velocity.configurator import configure_velocity_toml
 from velocity.service_creator import create_velocity_service
@@ -17,7 +17,7 @@ def main():
     velocity_dir.mkdir(parents=True, exist_ok=True)
 
     # Download + Initialisierung
-    download_velocity_jar(velocity_dir)
+    download_latest_velocity(velocity_dir)
     initialize_velocity_config(velocity_dir)
 
     # Konfiguration des TOML
