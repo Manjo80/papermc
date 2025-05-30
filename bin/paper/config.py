@@ -80,3 +80,12 @@ def update_velocity_toml(toml_path: Path, server_name: str, port: str):
 
     toml_path.write_text("\n".join(new_lines) + "\n")
     print(f"✅ {server_name} in velocity.toml eingetragen.")
+
+
+def apply_paper_configs(server_dir: Path, config: dict):
+    """Wendet spigot.yml- und paper-global.yml-Konfiguration an."""
+    velocity_secret_path = server_dir.parent / "forwarding.secret"
+    velocity_online_mode = config.get("online-mode", "false") == "true"
+
+    update_spigot(server_dir)
+    update_paper_global(server_dir, velocity_secret_path, velocity_online_mode)
