@@ -1,35 +1,43 @@
-from velocity.config_loader import load_config
-from velocity.downloader import download_latest_velocity
-from velocity.initializer import initialize_velocity_config
-from velocity.configurator import configure_velocity_toml
-from velocity.service_creator import create_velocity_service
-from velocity.secret_handler import create_forwarding_secret
+# bin/velocity/install_velocity_server.py
 
 from pathlib import Path
-
-BASE_DIR = Path("/opt/minecraft")
+from velocity.downloader import download_latest_velocity
+from velocity.initializer import initialize_velocity_server
+from velocity.secret_handler import create_secret
+from velocity.configurator import configure_velocity_toml
+from velocity.config_loader import load_velocity_config
+from velocity.service_creator import create_velocity_service
+import os
 
 def main():
-    defaults = load_config()
+    base_dir = Path("/opt/papermc/servers")
+    base_dir.mkdir(parents=True, exist_ok=True)
 
-    name = input("➡️  Name des Velocity-Servers: ").strip().lower()
-    velocity_dir = BASE_DIR / f"velocity-{name}"
-    velocity_dir.mkdir(parents=True, exist_ok=True)
+    server_name = input("➡️  Name des Velocity-Proxys: ").strip()
+    if not server_name:
+        print("❌ Kein Servername eingegeben.")
+        return
 
-    # Download + Initialisierung
-    download_latest_velocity(velocity_dir)
-    initialize_velocity_config(velocity_dir)
+    server_dir = base_dir / server_name
+    if server_dir.exists():
+        print("❌ Ein Server mit diesem Namen existiert bereits.")
+        return
 
-    # Konfiguration des TOML
-    configure_velocity_toml(velocity_dir, name, defaults)
+    server_dir.mkdir()
 
-    # Secret erzeugen
-    create_forwarding_secret(BASE_DIR)
+    # Velocity herunterladen
+    jar_path = download_latest_velocity(server_dir)
 
-    # Systemd-Service erstellen
-    create_velocity_service(name, velocity_dir)
+    # Secret erstellen
+    secret_path = create_secret(server_dir)
 
-    print("✅ Velocity-Server erfolgreich eingerichtet.")
+    # Konfiguration vorbereiten
+    configure_velocity_toml(server_dir, secret_path.read_text().strip(), server_name)
 
-if __name__ == "__main__":
-    main()
+    # Systemd-Service einrichten
+    create_velocity_service(server_name, server_dir)
+
+    # Konfiguration anzeigen
+    print("✅ Velocity-Proxy erfolgreich installiert.")
+    print(f"➡️  Serververzeichnis: {server_dir}")
+    print(f"➡️  Startbefehl: systemctl start velocity@{server_name}")
