@@ -2,12 +2,16 @@ from configparser import ConfigParser
 from pathlib import Path
 
 def format_value(value: str) -> str:
-    # Belasse true/false und Zahlen wie sie sind
-    if value.lower() in ["true", "false"] or value.isdigit():
+    """
+    Formatiert Werte so, dass Strings in doppelte Anführungszeichen gesetzt werden,
+    aber booleans und Zahlen unverändert bleiben.
+    """
+    if value.lower() in ["true", "false"]:
+        return value.lower()
+    if value.replace('.', '', 1).isdigit():
         return value
-    # Verhindere doppelte Anführungszeichen
     if value.startswith('"') and value.endswith('"'):
-        return value
+        value = value[1:-1]
     return f'"{value}"'
 
 def load_config(section: str = "DEFAULT") -> dict:
@@ -15,15 +19,16 @@ def load_config(section: str = "DEFAULT") -> dict:
     parser = ConfigParser()
     parser.read(config_path)
 
-    if section not in parser:
+    if section in parser:
+        raw_config = dict(parser[section])
+        cleaned_config = {}
+
+        for key, value in raw_config.items():
+            if not key.startswith("default_"):
+                continue
+            clean_key = key.replace("default_", "").lower().replace("_", "-")
+            cleaned_config[clean_key] = format_value(value)
+
+        return cleaned_config
+    else:
         raise ValueError(f"Sektion [{section}] nicht gefunden in {config_path}")
-
-    raw_config = parser[section]
-    formatted_config = {}
-
-    for key, value in raw_config.items():
-        clean_key = key.replace("default_", "").lower().replace("_", "-")
-        formatted_value = format_value(value)
-        formatted_config[clean_key] = formatted_value
-
-    return formatted_config
