@@ -2,7 +2,7 @@
 
 from pathlib import Path
 from velocity.downloader import download_latest_velocity
-from velocity.initializer import initialize_velocity_server
+from velocity.initializer import start_velocity_once
 from velocity.secret_handler import create_secret
 from velocity.configurator import configure_velocity_toml
 from velocity.config_loader import load_velocity_config
@@ -27,6 +27,9 @@ def main():
 
     # Velocity herunterladen
     jar_path = download_latest_velocity(server_dir)
+
+    # Server starten, damit Konfiguration erzeugt wird
+    start_velocity_once(server_dir)
 
     # Secret erstellen
     secret_path = create_secret(server_dir)
