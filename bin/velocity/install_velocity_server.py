@@ -35,7 +35,7 @@ def main():
     secret_path = copy_forwarding_secret(server_dir)
 
     # Konfiguration vorbereiten
-    apply_velocity_toml(server_dir, secret_path.read_text().strip(), server_name)
+    apply_velocity_toml(server_dir)
 
     # Systemd-Service einrichten
     create_systemd_service(server_name, server_dir)
