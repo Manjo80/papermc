@@ -78,7 +78,7 @@ def main():
     (server_dir / "eula.txt").write_text("eula=true\n")
 
     # `server.properties` schreiben
-    update_server_properties(server_dir, config, user_inputs, velocity_secret)
+    write_server_properties(server_dir, config, port, rcon_port, rcon_pass, view_distance, level_name, seed, velocity_secret)
 
     # Zweiter Start: paper-global.yml, spigot.yml erzeugen
     print("➡️  Starte Server zur Generierung weiterer Dateien...")
