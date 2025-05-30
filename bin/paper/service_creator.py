@@ -4,9 +4,9 @@ import subprocess
 
 def create_systemd_service(name, server_dir):
     print("➡️  Erstelle systemd Service...")
+
     service_file = f"/etc/systemd/system/paper-{name}.service"
-    content = f"""
-[Unit]
+    content = f"""[Unit]
 Description=PaperMC Server: {name}
 After=network.target
 
@@ -19,8 +19,10 @@ User=root
 [Install]
 WantedBy=multi-user.target
 """
+
     with open(service_file, "w") as f:
         f.write(content)
+
     subprocess.run(["systemctl", "daemon-reload"])
     subprocess.run(["systemctl", "enable", f"paper-{name}"])
     subprocess.run(["systemctl", "start", f"paper-{name}"])
