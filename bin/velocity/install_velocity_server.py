@@ -4,7 +4,7 @@ from pathlib import Path
 from velocity.downloader import download_latest_velocity
 from velocity.initializer import start_velocity_once
 from velocity.secret_handler import copy_forwarding_secret
-from velocity.configurator import configure_velocity_toml
+from velocity.configurator import apply_velocity_toml
 from velocity.config_loader import load_velocity_config
 from velocity.service_creator import create_velocity_service
 import os
@@ -35,7 +35,7 @@ def main():
     secret_path = copy_forwarding_secret(server_dir)
 
     # Konfiguration vorbereiten
-    configure_velocity_toml(server_dir, secret_path.read_text().strip(), server_name)
+    apply_velocity_toml(server_dir, secret_path.read_text().strip(), server_name)
 
     # Systemd-Service einrichten
     create_velocity_service(server_name, server_dir)
