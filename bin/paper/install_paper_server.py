@@ -1,106 +1,71 @@
-# bin/paper/install_paper_server.py
+# install_paper_server.py
 
 import os
 import subprocess
 from pathlib import Path
 
 from paper.downloader import download_latest_paper
-from paper.log_monitor import wait_for_log_message
+from paper.log_monitor import monitor_log_for_warnings
 from paper.property_writer import write_server_properties
-from paper.config import apply_paper_configs
-from paper.velocity_detection import find_velocity_servers, get_forwarding_secret
+from paper.config import update_spigot, update_paper_global, update_velocity_toml
+from paper.velocity_detection import detect_velocity
+from paper.input_collector import ask_server_properties
 from paper.service_creator import create_systemd_service
-from paper.input_collector import collect_user_inputs
 from velocity.config_loader import load_config
-from velocity.toml_editor import add_server_to_velocity_config
-
 
 def main():
     base_dir = Path("/opt/minecraft")
     base_dir.mkdir(parents=True, exist_ok=True)
 
-    server_name = input("➡️  Name des Paper-Servers: ").strip()
-    if not server_name:
-        print("❌ Kein Servername eingegeben.")
-        return
+    print("➡️ PaperMC Server Installer gestartet.")
 
-    server_dir = base_dir / server_name
+    # Konfiguration laden
+    defaults = load_config()
+
+    # Eingaben vom Benutzer
+    name, port, rcon_port, rcon_pass, view_distance, level_name, seed, mode, velocity_secret, velocity_toml, velocity_name = ask_server_properties(defaults)
+
+    server_dir = base_dir / f"paper-{name}"
     if server_dir.exists():
-        print("❌ Ein Server mit diesem Namen existiert bereits.")
+        print(f"❌ Serververzeichnis {server_dir} existiert bereits.")
         return
-    server_dir.mkdir()
+    server_dir.mkdir(parents=True)
 
-    # Benutzer fragen, ob Velocity verlinkt werden soll
-    use_velocity = input("➡️  Mit Velocity verbinden? (j/n): ").strip().lower() == 'j'
-    velocity_secret = None
-    velocity_toml_path = None
-
-    if use_velocity:
-        velocity_servers = find_velocity_servers(base_dir)
-        if not velocity_servers:
-            print("❌ Keine Velocity-Server gefunden.")
-            return
-
-        print("➡️  Verfügbare Velocity-Server:")
-        for i, v_path in enumerate(velocity_servers):
-            print(f"[{i}] {v_path.name}")
-        try:
-            choice = int(input("➡️  Nummer des Velocity-Servers: ").strip())
-            selected_velocity = velocity_servers[choice]
-            velocity_secret = get_forwarding_secret(selected_velocity)
-            velocity_toml_path = selected_velocity / "velocity.toml"
-        except (ValueError, IndexError):
-            print("❌ Ungültige Auswahl.")
-            return
-
-    # Lade Konfiguration
-    config = load_config("PAPER")
-
-    # Benutzerdefinierte Eingaben sammeln (inkl. Port, RCON, seed, etc.)
-    user_inputs = collect_user_inputs(config, velocity_secret is not None)
-    port = user_inputs['port']
-
-    # PaperMC herunterladen
+    # Paper herunterladen
     jar_path = download_latest_paper(server_dir)
 
-    # Erster Start: Dateien erzeugen
-    print("➡️  Starte Server zum Initialisieren...")
-    proc = subprocess.Popen([
-        "java",
-        f"-Xmx{config.get('default_max_ram', '2G')}",
-        f"-Xms{config.get('default_min_ram', '512M')}",
-        "-jar", jar_path.name
-    ], cwd=server_dir)
-    wait_for_log_message(server_dir / "logs" / "latest.log", "You have not accepted the EULA")
-    proc.terminate()
+    # Server einmal starten zum Erzeugen der Dateien
+    print("➡️ Starte Server zum Erzeugen der EULA...")
+    proc = subprocess.Popen(["java", "-jar", "paper.jar", "nogui"], cwd=server_dir)
+    proc.wait(timeout=15)
+    eula_path = server_dir / "eula.txt"
+    if eula_path.exists():
+        eula_path.write_text("eula=true\n")
+        print("✅ EULA akzeptiert.")
+    else:
+        print("❌ EULA nicht gefunden.")
+        return
 
-    # EULA akzeptieren
-    (server_dir / "eula.txt").write_text("eula=true\n")
+    # server.properties schreiben
+    write_server_properties(server_dir, defaults, port, rcon_port, rcon_pass, view_distance, level_name, seed, velocity_secret)
 
-    # `server.properties` schreiben
-    write_server_properties(server_dir, config, port, rcon_port, rcon_pass, view_distance, level_name, seed, velocity_secret)
+    # Server starten zum Erzeugen von spigot.yml und paper-global.yml
+    print("➡️ Starte Server zur Erzeugung weiterer Konfigurationsdateien...")
+    proc = subprocess.Popen(["java", "-jar", "paper.jar", "nogui"], cwd=server_dir)
+    proc.wait(timeout=30)
 
-    # Zweiter Start: paper-global.yml, spigot.yml erzeugen
-    print("➡️  Starte Server zur Generierung weiterer Dateien...")
-    proc = subprocess.Popen([
-        "java",
-        f"-Xmx{config.get('default_max_ram', '2G')}",
-        f"-Xms{config.get('default_min_ram', '512M')}",
-        "-jar", jar_path.name
-    ], cwd=server_dir)
-    wait_for_log_message(server_dir / "logs" / "latest.log", "Done")
-    proc.terminate()
+    # spigot.yml anpassen
+    update_spigot(server_dir)
 
-    # Konfigurationen anpassen
-    apply_paper_configs(server_dir, velocity_secret, velocity_toml_path)
+    # paper-global.yml anpassen (nur wenn Velocity genutzt wird)
+    if velocity_secret:
+        update_paper_global(server_dir, velocity_secret, velocity_online_mode=True)
 
-    # Server in Velocity-Konfiguration eintragen
-    if use_velocity and velocity_toml_path:
-        add_server_to_velocity_config(velocity_toml_path, server_name, port)
+    # velocity.toml eintragen, wenn vorhanden
+    if velocity_toml:
+        update_velocity_toml(velocity_toml, name, port)
 
-    # Systemd-Service anlegen
-    create_systemd_service(server_name, server_dir, config.get("default_min_ram", "512M"), config.get("default_max_ram", "2G"))
+    # systemd Service anlegen
+    create_systemd_service(name, server_dir)
 
-    print("✅ Paper-Server wurde erfolgreich installiert.")
-    print(f"➡️  Serververzeichnis: {server_dir}")
-    print(f"➡️  Startbefehl: systemctl start paper@{server_name}")
+    print(f"✅ PaperMC Server '{name}' erfolgreich installiert unter {server_dir}")
