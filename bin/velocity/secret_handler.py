@@ -15,5 +15,7 @@ def copy_forwarding_secret(server_dir: Path):
     if source.exists():
         shutil.copy2(source, destination)
         print("➡️  forwarding.secret wurde kopiert.")
+        return source  # <--- ✅ Rückgabe des Pfads
     else:
         print("❌ forwarding.secret nicht gefunden in", source)
+        return None  # <--- wichtig für Fehlerbehandlung
