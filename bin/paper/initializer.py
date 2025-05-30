@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 def start_server_once(server_dir: Path):
-    print("➡️  Starte Server zum Erzeugen der Dateien...")
+    print("➞️  Starte Server zum Erzeugen der Dateien...")
     process = subprocess.Popen(
         ["java", "-Xmx512M", "-Xms512M", "-jar", "paper.jar", "nogui"],
         cwd=server_dir,
@@ -26,13 +26,13 @@ def start_server_once(server_dir: Path):
 
 
 def apply_eula(server_dir: Path):
-    print("➡️  Akzeptiere EULA...")
+    print("➞️  Akzeptiere EULA...")
     with open(server_dir / "eula.txt", "w") as f:
         f.write("eula=true\n")
 
 
 def run_server_once(server_dir, seconds=30):
-    print("➡️  Starte Server einmal vollständig zum Generieren aller Dateien...")
+    print("➞️  Starte Server einmal vollständig zum Generieren aller Dateien...")
     process = subprocess.Popen(["java", "-Xmx512M", "-Xms512M", "-jar", "paper.jar", "nogui"],
                                cwd=server_dir, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     try:
@@ -44,7 +44,7 @@ def run_server_once(server_dir, seconds=30):
 
 
 def run_server_until_generated(server_dir: Path, timeout: int = 60):
-    print("➡️  Starte Server bis alle Konfigurationsdateien erstellt sind...")
+    print("➞️  Starte Server bis alle Konfigurationsdateien erstellt sind...")
     paper_global_path = server_dir / "config" / "paper-global.yml"
 
     process = subprocess.Popen(
@@ -75,7 +75,7 @@ def run_server_until_generated(server_dir: Path, timeout: int = 60):
 
 # ➕ Neue Funktion für Modularität
 def start_server_fully_and_stop(server_dir: Path):
-    print("➡️ Starte Server vollständig...")
+    print("➞️ Starte Server vollständig...")
     process = subprocess.Popen(
         ["java", "-Xmx1024M", "-Xms1024M", "-jar", "paper.jar", "nogui"],
         cwd=server_dir,
@@ -93,21 +93,4 @@ def start_server_fully_and_stop(server_dir: Path):
     finally:
         process.terminate()
         process.wait()
-        print("🛑 Server wurde gestoppt.")
-
-
-# ➕ Neue Funktion für Velocity
-def start_velocity_once(server_dir: Path):
-    print("➡️ Starte Velocity zum Erzeugen von velocity.toml ...")
-    process = subprocess.Popen(
-        ["java", "-Xmx512M", "-Xms512M", "-jar", "velocity.jar"],
-        cwd=server_dir,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT
-    )
-    try:
-        time.sleep(10)
-    finally:
-        process.terminate()
-        process.wait()
-        print("✅ Velocity gestoppt.")
+        print("
