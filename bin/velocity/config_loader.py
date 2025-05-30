@@ -1,48 +1,30 @@
+# velocity/config_loader.py
+
+from configparser import ConfigParser
 from pathlib import Path
 
-def apply_velocity_toml(server_dir: Path):
-    config = load_config("VELOCITY")  # Gibt ein dict zurück
-    toml_path = server_dir / "velocity.toml"
+def load_config(section: str = "DEFAULT") -> dict:
+    config_path = Path(__file__).resolve().parents[2] / "config" / "global.conf"
+    parser = ConfigParser()
+    parser.optionxform = str  # Groß-/Kleinschreibung beibehalten
+    parser.read(config_path)
 
-    with open(toml_path, 'r') as f:
-        lines = f.readlines()
+    if section not in parser:
+        raise ValueError(f"Sektion [{section}] nicht gefunden in {config_path}")
 
-    new_lines = []
-    in_section = None
+    result = {}
+    for key, value in parser[section].items():
+        clean_key = key.replace("DEFAULT_", "").lower().replace("_", "-")
+        value = value.strip()
 
-    # Mapping vorbereiten: key umformatieren wie in der toml erwartet
-    formatted_config = {}
-    for key, value in config.items():
-        clean_key = key.replace("default_", "").lower().replace("_", "-")
-        if value.lower() not in ["true", "false"] and not value.replace('.', '', 1).isdigit():
-            value = value.strip('"')  # Vorhandene " entfernen
+        # Falls bereits gequotet: Quote entfernen, damit es nicht doppelt wird
+        if value.startswith('"') and value.endswith('"'):
+            value = value[1:-1]
+
+        # Werte quoten, außer bei bools und reinen Zahlen (ohne Sonderzeichen)
+        if not value.lower() in ["true", "false"] and not value.replace('.', '', 1).isdigit():
             value = f'"{value}"'
-        formatted_config[clean_key] = value
 
-    for line in lines:
-        stripped = line.strip()
-        if stripped.startswith("["):
-            section = stripped.strip("[]")
-            in_section = section
-            new_lines.append(line)
-            continue
+        result[clean_key] = value
 
-        key_value = stripped.split("=", 1)
-        if len(key_value) == 2:
-            key = key_value[0].strip()
-            if key in formatted_config:
-                value = formatted_config[key]
-                new_lines.append(f"{key} = {value}\n")
-            else:
-                new_lines.append(line)
-        else:
-            new_lines.append(line)
-
-    # Platzhalter für [servers] und [forced-hosts] erzwingen, falls nicht vorhanden
-    if "[servers]" not in "".join(new_lines):
-        new_lines.append("\n[servers]\n# Platzhalter\n")
-    if "[forced-hosts]" not in "".join(new_lines):
-        new_lines.append("\n[forced-hosts]\n# Platzhalter\n")
-
-    with open(toml_path, 'w') as f:
-        f.writelines(new_lines)
+    return result
