@@ -38,7 +38,7 @@ def main():
     apply_velocity_toml(server_dir)
 
     # Systemd-Service einrichten
-    create_systemd_service(server_name, server_dir)
+    create_systemd_service(server_name, server_dir, "512M", "512M")
 
     # Konfiguration anzeigen
     print("✅ Velocity-Proxy erfolgreich installiert.")
