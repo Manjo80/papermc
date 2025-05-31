@@ -1,6 +1,6 @@
 import subprocess
 from pathlib import Path
-from paperserver.download import download_latest_paper
+from bin.paperserver.download import download_latest_paper
 from configparser import ConfigParser
 
 def load_ram_config():
