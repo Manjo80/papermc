@@ -40,5 +40,8 @@ accept_eula(server_dir)
 # server.properties schreiben
 write_server_properties(server_path, config)
 
+# Server stsrten bis spiot und paer-global erstellt sind
+start_until_configs_generated(server_dir)
+
 # Systemctl erstellen mit autoupdater
 create_systemd_service(server_name, server_dir)
