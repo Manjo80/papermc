@@ -5,7 +5,7 @@ from pathlib import Path
 from downloader import download_latest_paper
 from config_loader import load_config
 from server_starter import start_server_until_eula
-from config import accept_eula
+from config import set_eula_true, write_server_properties
 from paperserver.service_creator import create_systemd_service
 
 # Konfiguration laden
