@@ -1,57 +1,33 @@
+ # install.py
+
 import os
-import subprocess
 from pathlib import Path
-import requests
+from downloader import download_latest_paper
+from config_loader import load_config
+from server_starter import start_server_until_eula
 
-# Konfigurationswerte aus global.conf laden
-def load_config():
-    from configparser import ConfigParser
-    config_path = Path(__file__).resolve().parent.parent / "config" / "global.conf"
-    config = ConfigParser()
-    config.read(config_path)
-    return config['DEFAULT']
+# Konfiguration laden
+config = load_config()
 
-# Lade neueste PaperMC-Version herunter
-def download_latest_paper(target_dir: Path) -> Path:
-    print("➡️  Lade neueste PaperMC-Version herunter...")
-    versions = requests.get("https://api.papermc.io/v2/projects/paper").json()
-    latest_version = versions["versions"][-1]
+# Installationsverzeichnis aus global.conf
+base_dir = Path(config['BASE_DIR'])
+base_dir.mkdir(parents=True, exist_ok=True)
 
-    builds = requests.get(f"https://api.papermc.io/v2/projects/paper/versions/{latest_version}").json()
-    latest_build = builds["builds"][-1]
+# Servernamen abfragen
+name = input("➡️ Name des neuen Paper-Servers: ").strip()
+if not name:
+    print("❌ Kein Name eingegeben.")
+    exit(1)
 
-    jar_name = f"paper-{latest_version}-{latest_build}.jar"
-    jar_url = f"https://api.papermc.io/v2/projects/paper/versions/{latest_version}/builds/{latest_build}/downloads/{jar_name}"
-    jar_path = target_dir / "paper.jar"
+server_dir = base_dir / f"paper-{name}"
+if server_dir.exists():
+    print("❌ Serververzeichnis existiert bereits.")
+    exit(1)
+server_dir.mkdir()
 
-    r = requests.get(jar_url, stream=True)
-    r.raise_for_status()
+# Paper herunterladen
+jar_path = download_latest_paper(server_dir)
+print(f"✅ PaperMC wurde heruntergeladen: {jar_path}")
 
-    with open(jar_path, 'wb') as f:
-        for chunk in r.iter_content(chunk_size=8192):
-            if chunk:
-                f.write(chunk)
-
-    print(f"✅ PaperMC heruntergeladen: {jar_path}")
-    return jar_path
-
-# Starte Server einmal, um EULA zu erzeugen
-def start_server_until_eula(server_dir: Path):
-    print("➡️  Starte Server zum Generieren der EULA...")
-    process = subprocess.Popen(
-        ["java", "-Xmx512M", "-Xms512M", "-jar", "paper.jar"],
-        cwd=server_dir,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT
-    )
-
-    try:
-        for line in process.stdout:
-            decoded = line.decode(errors="ignore").strip()
-            print(decoded)
-            if "eula" in decoded.lower():
-                break
-    finally:
-        process.terminate()
-        process.wait()
-        print("
+# Server starten bis EULA erscheint
+start_server_until_eula(server_dir)
