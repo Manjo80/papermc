@@ -2,7 +2,7 @@
 
 import os
 from pathlib import Path
-from downloader import download_latest_paper
+from download_paper import download_latest_paper
 from config_loader import load_config
 from server_starter import start_server_until_eula, start_until_configs_generated
 from config import accept_eula, write_server_properties
