@@ -5,6 +5,7 @@ from pathlib import Path
 from downloader import download_latest_paper
 from config_loader import load_config
 from server_starter import start_server_until_eula
+from config import accept_eula
 
 # Konfiguration laden
 config = load_config()
@@ -31,3 +32,6 @@ print(f"✅ PaperMC wurde heruntergeladen: {jar_path}")
 
 # Server starten bis EULA erscheint
 start_server_until_eula(server_dir)
+
+# Accept EULA
+accept_eula(server_dir)
