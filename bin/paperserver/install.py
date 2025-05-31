@@ -2,11 +2,11 @@
 
 import os
 from pathlib import Path
-from .paperserver.download_paper import download_latest_paper
-from .paperserver.config_loader import load_config
-from .paperserver.server_starter import start_server_until_eula, start_until_configs_generated
-from .paperserver.config import accept_eula, write_server_properties
-from .paperserver.service_creator import create_systemd_service
+from .download_paper import download_latest_paper
+from .config_loader import load_config
+from .server_starter import start_server_until_eula, start_until_configs_generated
+from .config import accept_eula, write_server_properties
+from .service_creator import create_systemd_service
 
 # Konfiguration laden
 config = load_config()
