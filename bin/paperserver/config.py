@@ -28,14 +28,9 @@ def convert_value(value: str) -> str:
         pass
     return value.replace(" ", "\\ ").replace("§", "\\u00A7")
 
-
-def write_server_properties(server_dir: Path, config: ConfigParser, server_name: str, velocity_secret: str = None):
+def write_server_properties(server_dir: Path, config: ConfigParser):
     print("➡️  Schreibe server.properties...")
 
-    # Pfad vorbereiten
-    properties_path = server_dir / "server.properties"
-    
-    # Alle Werte aus [PAPER] laden
     paper_config = config["PAPER"]
     lines = []
 
@@ -44,18 +39,7 @@ def write_server_properties(server_dir: Path, config: ConfigParser, server_name:
             prop_key = key.replace("default_", "").lower()
             lines.append(f"{prop_key}={value.strip()}")
 
-    # Sonderwerte ergänzen
-    lines.append("enable-command-block=true")
-    lines.append("online-mode=false")
-    lines.append("enable-rcon=true")
-
-    if velocity_secret:
-        lines.append("velocity-support-forwarding-secret-file=../forwarding.secret")
-    else:
-        # Einfaches (nicht sicheres) Default-Passwort setzen, kann bei Bedarf angepasst werden
-        lines.append("rcon.password=changeme")
-
-    # Schreiben
+    properties_path = server_dir / "server.properties"
     with properties_path.open("w") as f:
         f.write("\n".join(lines) + "\n")
 
