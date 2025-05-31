@@ -6,6 +6,7 @@ from downloader import download_latest_paper
 from config_loader import load_config
 from server_starter import start_server_until_eula
 from config import accept_eula
+from paperserver.service_creator import create_systemd_service
 
 # Konfiguration laden
 config = load_config()
@@ -35,3 +36,6 @@ start_server_until_eula(server_dir)
 
 # Accept EULA
 accept_eula(server_dir)
+
+# Systemctl erstellen mit autoupdater
+create_systemd_service(server_name, server_dir)
