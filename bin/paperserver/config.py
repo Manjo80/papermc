@@ -1,6 +1,7 @@
 # config.py
 
 from pathlib import Path
+from configparser import ConfigParser
 
 def accept_eula(server_dir: Path):
     """Setzt die EULA auf true."""
@@ -28,15 +29,34 @@ def convert_value(value: str) -> str:
     return value.replace(" ", "\\ ").replace("§", "\\u00A7")
 
 
-def write_server_properties(server_dir: Path, config: dict):
-    props_path = server_dir / "server.properties"
-    with props_path.open("w") as f:
-        f.write("# Automatisch generiert\n")
-        for key, value in config.items():
-            if key.startswith("DEFAULT_"):
-                prop_key = key.replace("DEFAULT_", "").lower().replace("_", "-")
-                f.write(f"{prop_key}={convert_value(value)}\n")
-        # Ergänzung: wichtige zusätzliche Optionen
-        f.write("enable-command-block=true\n")
-        f.write("online-mode=false\n")
-        f.write("enable-rcon=true\n")
+def write_server_properties(server_dir: Path, config: ConfigParser, server_name: str, velocity_secret: str = None):
+    print("➡️  Schreibe server.properties...")
+
+    # Pfad vorbereiten
+    properties_path = server_dir / "server.properties"
+    
+    # Alle Werte aus [PAPER] laden
+    paper_config = config["PAPER"]
+    lines = []
+
+    for key, value in paper_config.items():
+        if key.startswith("default_"):
+            prop_key = key.replace("default_", "").lower()
+            lines.append(f"{prop_key}={value.strip()}")
+
+    # Sonderwerte ergänzen
+    lines.append("enable-command-block=true")
+    lines.append("online-mode=false")
+    lines.append("enable-rcon=true")
+
+    if velocity_secret:
+        lines.append("velocity-support-forwarding-secret-file=../forwarding.secret")
+    else:
+        # Einfaches (nicht sicheres) Default-Passwort setzen, kann bei Bedarf angepasst werden
+        lines.append("rcon.password=changeme")
+
+    # Schreiben
+    with properties_path.open("w") as f:
+        f.write("\n".join(lines) + "\n")
+
+    print("✅ server.properties geschrieben.")
