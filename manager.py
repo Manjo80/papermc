@@ -8,6 +8,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "bin"))
 from paper.install_paper_server import main as install_paper_server
 from velocity.install_velocity_server import main as install_velocity_server
 from uninstall.uninstall_server import main as uninstall_server
+from paperserver.install import main as install
 # from bin.open_rcon_terminal import main as open_rcon_terminal  # optional
 
 def show_menu():
@@ -22,7 +23,7 @@ def show_menu():
         choice = input("> ")
 
         if choice == "1":
-            install_paper_server()
+            install()
         elif choice == "2":
             install_velocity_server()
         elif choice == "3":
