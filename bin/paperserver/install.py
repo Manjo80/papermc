@@ -5,7 +5,7 @@ from pathlib import Path
 from downloader import download_latest_paper
 from config_loader import load_config
 from server_starter import start_server_until_eula
-from config import set_eula_true, write_server_properties
+from config import accept_eula, write_server_properties
 from paperserver.service_creator import create_systemd_service
 
 # Konfiguration laden
@@ -36,6 +36,9 @@ start_server_until_eula(server_dir)
 
 # Accept EULA
 accept_eula(server_dir)
+
+# server.properties schreiben
+write_server_properties(server_path, config)
 
 # Systemctl erstellen mit autoupdater
 create_systemd_service(server_name, server_dir)
