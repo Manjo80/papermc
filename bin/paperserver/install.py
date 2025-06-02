@@ -51,5 +51,5 @@ def main():
     # Konfiguration anzeigen
     print("✅ Paper-Server erfolgreich installiert.")
     print(f"➡️  Serververzeichnis: {server_dir}")
-    print(f"➡️  Startbefehl: systemctl start paper@{server_name}")
+    print(f"➡️  Startbefehl: systemctl start paper@{name}")
     input("🔁 Drücke [Enter], um zurückzukehren ...")
