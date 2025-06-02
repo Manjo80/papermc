@@ -1,60 +1,30 @@
-from pathlib import Path
 import subprocess
+from pathlib import Path
 
 def create_systemd_service(server_name: str, server_dir: Path):
-    print("➞️ Erstelle systemd-Service für Paper-Server...")
-
-    from paperserver.config_loader import load_ram_config
-    min_ram, max_ram = load_ram_config()
+    print("➡️ Erstelle systemd-Service für Paper-Server (ohne Update)...")
 
     service_name = f"paper-{server_name}.service"
     service_path = Path("/etc/systemd/system") / service_name
     updater_path = server_dir / "autostart.py"
-    update_check_path = Path("/opt/papermc/bin/paperserver/update_check.py")
 
-    # Autostart-Python-Skript
+    # Autostart-Python-Skript (ohne Update)
     autostart_script = f"""#!/usr/bin/env python3
 import os
-import sys
-from pathlib import Path
-
-sys.path.append("/opt/papermc/bin")  # Wichtig für Import
-
-from paperserver.download_paper import download_latest_paper
 import subprocess
+from pathlib import Path
 
 server_dir = Path("{server_dir}")
 os.chdir(server_dir)
 
-print("🔍 Suche nach Paper-Update...")
-download_latest_paper(server_dir)
-
 print("🚀 Starte Paper-Server...")
-subprocess.run(["java", "-Xms{min_ram}", "-Xmx{max_ram}", "-jar", "paper.jar", "nogui"])
+subprocess.run(["java", "-Xms512M", "-Xmx2G", "-jar", "paper.jar", "nogui"])
 """
 
-    # Schreibe Autostart-Skript
+    # Schreibe das Autostart-Skript
     with updater_path.open("w") as f:
         f.write(autostart_script)
     updater_path.chmod(0o755)
-
-    # update_check.py erzeugen (falls noch nicht vorhanden oder immer neu schreiben)
-    with update_check_path.open("w") as f:
-        f.write("""#!/usr/bin/env python3
-import sys
-from pathlib import Path
-sys.path.append("/opt/papermc/bin")
-from paperserver.download_paper import download_latest_paper
-
-server_dir = Path.cwd()
-print("🔍 Prüfe auf neues PaperMC-Update...")
-try:
-    download_latest_paper(server_dir)
-    print("✅ PaperMC-Update abgeschlossen.")
-except Exception as e:
-    print(f"❌ Fehler beim Update: {e}")
-""")
-    update_check_path.chmod(0o755)
 
     # systemd-Service-Datei
     service_content = f"""[Unit]
