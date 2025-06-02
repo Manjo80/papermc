@@ -1,14 +1,8 @@
 import subprocess
 from pathlib import Path
 from bin.paperserver.download_paper import download_latest_paper
+from paperserver.config_loader import load_ram_config
 from configparser import ConfigParser
-
-def load_ram_config():
-    config_path = Path(__file__).resolve().parents[1] / "config" / "global.conf"
-    config = ConfigParser()
-    config.read(config_path)
-    default = config["DEFAULT"]
-    return default.get("DEFAULT_MIN_RAM", "512M"), default.get("DEFAULT_MAX_RAM", "2G")
 
 def create_systemd_service(server_name: str, server_dir: Path):
     print("➡️ Erstelle systemd-Service für Paper-Server...")
