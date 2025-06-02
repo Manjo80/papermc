@@ -48,6 +48,17 @@ def update_paper_global_yml(server_dir: Path):
 
     print("✅ paper-global.yml angepasst.")
 
+def find_velocity_server(base_dir: Path) -> Path | None:
+    """
+    Sucht im base_dir nach einem Ordner, der mit 'velocity-' beginnt und eine 'velocity.toml' enthält.
+    Gibt den Pfad zurück oder None, falls nichts gefunden wurde.
+    """
+    for subdir in base_dir.iterdir():
+        if subdir.is_dir() and subdir.name.startswith("velocity-"):
+            if (subdir / "velocity.toml").exists():
+                return subdir
+    return None
+
 def update_velocity_toml(velocity_dir: Path, server_name: str, server_ip: str, server_port: int, set_forced_host: bool, set_try: bool):
     velocity_config_path = velocity_dir / "velocity.toml"
     if not velocity_config_path.exists():
