@@ -29,18 +29,31 @@ def convert_value(value: str) -> str:
     return value.replace(" ", "\\ ").replace("§", "\\u00A7")
 
 def write_server_properties(server_dir: Path, config: ConfigParser):
-    print("➡️  Schreibe server.properties...")
+    print("➡️  Aktualisiere server.properties...")
 
     paper_config = config["PAPER"]
-    lines = []
+    properties_path = server_dir / "server.properties"
+    existing = {}
 
+    # Vorhandene Datei lesen, wenn sie existiert
+    if properties_path.exists():
+        with properties_path.open("r") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    existing[k.strip()] = v.strip()
+
+    # Konfigurationswerte anwenden
     for key, value in paper_config.items():
         if key.startswith("default_"):
             prop_key = key.replace("default_", "").lower()
-            lines.append(f"{prop_key}={value.strip()}")
+            existing[prop_key] = value.strip()
 
-    properties_path = server_dir / "server.properties"
+    # Alles zurückschreiben
     with properties_path.open("w") as f:
-        f.write("\n".join(lines) + "\n")
+        for k, v in existing.items():
+            f.write(f"{k}={v}\n")
 
-    print("✅ server.properties geschrieben.")
+    print("✅ server.properties aktualisiert.")
+
