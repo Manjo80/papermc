@@ -18,7 +18,7 @@ def main():
         print("❌ Kein Servername eingegeben.")
         return
 
-    server_dir = base_dir / server_name
+    server_dir = base_dir / f"paper-{server_name}"
     if server_dir.exists():
         print("❌ Ein Server mit diesem Namen existiert bereits.")
         return
