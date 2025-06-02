@@ -7,6 +7,7 @@ from paperserver.config_loader import load_config
 from paperserver.server_starter import start_server_until_eula, start_until_configs_generated
 from paperserver.config import accept_eula, write_server_properties
 from paperserver.service_creator import create_systemd_service
+from paperserver.velocity_setup import copy_velocity_secret, update_spigot_yml, update_paper_global_yml, update_velocity_toml
 
 def main():
    
