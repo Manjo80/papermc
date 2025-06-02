@@ -40,7 +40,7 @@ def main():
     accept_eula(server_dir)
 
     # server.properties schreiben
-    write_server_properties(server_path, config)
+    write_server_properties(server_dir, config)
 
     # Server stsrten bis spiot und paer-global erstellt sind
     start_until_configs_generated(server_dir)
