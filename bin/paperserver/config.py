@@ -35,25 +35,24 @@ def write_server_properties(server_dir: Path, config: ConfigParser):
     properties_path = server_dir / "server.properties"
     existing = {}
 
-    # Vorhandene Datei lesen, wenn sie existiert
+    # Vorhandene Datei einlesen
     if properties_path.exists():
         with properties_path.open("r") as f:
             for line in f:
                 line = line.strip()
                 if line and not line.startswith("#") and "=" in line:
                     k, v = line.split("=", 1)
-                    existing[k.strip()] = v.strip()
+                    existing[k.strip().lower()] = v.strip()
 
-    # Konfigurationswerte anwenden
+    # Neue Werte aus der Config einfügen oder überschreiben
     for key, value in paper_config.items():
         if key.startswith("default_"):
             prop_key = key.replace("default_", "").lower()
             existing[prop_key] = value.strip()
 
-    # Alles zurückschreiben
+    # Zurückschreiben
     with properties_path.open("w") as f:
-        for k, v in existing.items():
+        for k, v in sorted(existing.items()):
             f.write(f"{k}={v}\n")
 
     print("✅ server.properties aktualisiert.")
-
