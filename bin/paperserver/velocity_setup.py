@@ -48,7 +48,7 @@ def update_paper_global_yml(server_dir: Path):
 
     print("✅ paper-global.yml angepasst.")
 
-def update_velocity_toml(velocity_dir: Path, server_name: str, server_ip: str, server_port: int, set_forced_host: bool):
+def update_velocity_toml(velocity_dir: Path, server_name: str, server_ip: str, server_port: int, set_forced_host: bool, set_try: bool):
     velocity_config_path = velocity_dir / "velocity.toml"
     if not velocity_config_path.exists():
         print("❌ velocity.toml nicht gefunden.")
@@ -63,6 +63,12 @@ def update_velocity_toml(velocity_dir: Path, server_name: str, server_ip: str, s
         config.setdefault('forced-hosts', {})[server_name + ".example.com"] = [server_name]
     else:
         config.pop('forced-hosts', None)
+
+    if set_try:
+        try_list = config.get("try", [])
+        if server_name not in try_list:
+            try_list.append(server_name)
+        config["try"] = try_list
 
     with velocity_config_path.open("w") as f:
         toml.dump(config, f)
