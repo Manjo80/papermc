@@ -6,4 +6,4 @@ def load_config():
     config_path = Path(__file__).resolve().parents[2] / "config" / "global.conf"
     parser = ConfigParser()
     parser.read(config_path)
-    return parser['DEFAULT']
+    return parser
