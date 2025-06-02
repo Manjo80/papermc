@@ -1,6 +1,7 @@
  # install.py
 
 import os
+import shutil
 from pathlib import Path
 from paperserver.download_paper import download_latest_paper
 from paperserver.config_loader import load_config
@@ -10,8 +11,6 @@ from paperserver.service_creator import create_systemd_service
 from paperserver.velocity_setup import copy_velocity_secret, update_spigot_yml, update_paper_global_yml, update_velocity_toml
 
 def main():
-   
-    # Konfiguration laden
     config = load_config()
 
     # Installationsverzeichnis aus global.conf
@@ -46,7 +45,30 @@ def main():
     # Server stsrten bis spiot und paer-global erstellt sind
     start_until_configs_generated(server_dir)
 
-    # Systemctl erstellen mit autoupdater
+    # Velocity-Einbindung abfragen
+    use_velocity = input("➡️ Soll der Server in Velocity eingebunden werden? (y/n): ").lower() == 'y'
+    if use_velocity:
+        velocity_dir = Path("/opt/minecraft/velocity")
+        copy_velocity_secret(velocity_dir, server_dir)
+        update_spigot_yml(server_dir)
+        update_paper_global_yml(server_dir)
+
+       # IP und Port automatisch aus server.properties auslesen
+        ip = "127.0.0.1"
+        port = 25565
+        props_file = server_dir / "server.properties"
+        if props_file.exists():
+            with open(props_file) as f:
+                for line in f:
+                    if line.startswith("server-port="):
+                        port = int(line.split("=")[1].strip())
+                    elif line.startswith("server-ip="):
+                        ip = line.split("=")[1].strip()
+
+        redirect = input("➡️ Soll Velocity bei Login direkt auf diesen Server weiterleiten? (y/n): ").lower() == 'y'
+        update_velocity_toml(velocity_dir, name, ip, port, redirect)
+     
+    # Systemctl erstellen
     create_systemd_service(name, server_dir)
 
     # Konfiguration anzeigen
