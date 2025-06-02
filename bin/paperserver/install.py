@@ -8,7 +8,7 @@ from paperserver.config_loader import load_config
 from paperserver.server_starter import start_server_until_eula, start_until_configs_generated
 from paperserver.config import accept_eula, write_server_properties
 from paperserver.service_creator import create_systemd_service
-from paperserver.velocity_setup import copy_velocity_secret, update_spigot_yml, update_paper_global_yml, update_velocity_toml
+from paperserver.velocity_setup import copy_velocity_secret, update_spigot_yml, update_paper_global_yml, update_velocity_toml, find_velocity_server
 
 def main():
     config = load_config()
@@ -48,7 +48,10 @@ def main():
     # Velocity-Einbindung abfragen
     use_velocity = input("➡️ Soll der Server in Velocity eingebunden werden? (y/n): ").lower() == 'y'
     if use_velocity:
-        velocity_dir = Path("/opt/minecraft/velocity")
+        velocity_dir = find_velocity_server(Path("/opt/minecraft"))
+        if velocity_dir is None:
+            print("❌ Kein gültiger Velocity-Server gefunden.")
+            return
         copy_velocity_secret(velocity_dir, server_dir)
         update_spigot_yml(server_dir)
         update_paper_global_yml(server_dir)
