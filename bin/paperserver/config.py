@@ -29,33 +29,29 @@ def convert_value(value: str) -> str:
     return value.replace(" ", "\\ ").replace("§", "\\u00A7")
 
 def write_server_properties(server_dir: Path, config: ConfigParser):
-    print("➡️  Schreibe server.properties...")
+    print("➡️  Aktualisiere server.properties...")
+    paper_config = dict(config.items("PAPER", raw=True))  # Nur [PAPER]
 
-    if "PAPER" not in config:
-        print("❌ Sektion [PAPER] nicht gefunden.")
-        return
+    path = server_dir / "server.properties"
+    props = {}
 
-    paper_config = config._sections["PAPER"]  # Nur explizit definierte Werte
-    properties = {}
-
-    for key, value in paper_config.items():
-        if key.startswith("default_"):
-            prop_key = key.replace("default_", "").lower()
-            properties[prop_key] = value.strip()
-
-    # Bestehende Datei lesen, um alte Einträge zu ersetzen
-    properties_path = server_dir / "server.properties"
-    if properties_path.exists():
-        with properties_path.open("r") as f:
+    # Bestehende Datei einlesen
+    if path.exists():
+        with path.open("r") as f:
             for line in f:
                 if "=" in line:
                     k, v = line.strip().split("=", 1)
-                    if k not in properties:
-                        properties[k] = v.strip()
+                    props[k.strip()] = v.strip()
 
-    # Alles neu schreiben
-    with properties_path.open("w") as f:
-        for k, v in properties.items():
-            f.write(f"{k}={v}\n")
+    # Neue Werte anwenden (ersetzen oder ergänzen)
+    for key, value in paper_config.items():
+        if key.startswith("default_"):
+            clean_key = key.replace("default_", "").replace("_", "-").lower()
+            props[clean_key] = value.strip()
 
-    print("✅ server.properties geschrieben.")
+    # Alles zurückschreiben
+    with path.open("w") as f:
+        for k in sorted(props.keys()):
+            f.write(f"{k}={props[k]}\n")
+
+    print("✅ server.properties wurde aktualisiert.")
