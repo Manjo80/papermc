@@ -67,7 +67,7 @@ def main():
 
         redirect = input("➡️ Soll Velocity bei Login direkt auf diesen Server weiterleiten? (y/n): ").lower() == 'y'
         set_try = input("➡️ Soll dieser Server in die 'try' Liste in velocity.toml aufgenommen werden? (y/n): ").lower() == 'y'
-        update_velocity_toml(velocity_dir, name, ip, port, set_try)
+        update_velocity_toml(velocity_dir, name, ip, port, redirect, set_try)
      
     # Systemctl erstellen
     create_systemd_service(name, server_dir)
