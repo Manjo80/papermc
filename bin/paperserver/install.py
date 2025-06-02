@@ -46,7 +46,7 @@ def main():
     start_until_configs_generated(server_dir)
 
     # Systemctl erstellen mit autoupdater
-    create_systemd_service(server_name, server_dir)
+    create_systemd_service(name, server_dir)
 
     # Konfiguration anzeigen
     print("✅ Paper-Server erfolgreich installiert.")
