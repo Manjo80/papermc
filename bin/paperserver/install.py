@@ -14,7 +14,7 @@ def main():
     config = load_config()
 
     # Installationsverzeichnis aus global.conf
-    base_dir = Path(config['BASE_DIR'])
+    base_dir = Path(config['DEFAULT']['BASE_DIR'])
     base_dir.mkdir(parents=True, exist_ok=True)
 
     # Servernamen abfragen
