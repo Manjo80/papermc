@@ -19,7 +19,7 @@ def update_spigot_yml(server_dir: Path):
     with spigot_path.open("r") as f:
         config = yaml.safe_load(f)
 
-    config['settings']['bungeecord'] = True
+    config['settings']['bungeecord'] = False
 
     with spigot_path.open("w") as f:
         yaml.dump(config, f)
