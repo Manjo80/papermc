@@ -28,24 +28,31 @@ def update_spigot_yml(server_dir: Path):
 
 def update_paper_global_yml(server_dir: Path):
     paper_global_path = server_dir / "config" / "paper-global.yml"
+    secret_path = server_dir / "forwarding.secret"
     if not paper_global_path.exists():
         print("❌ paper-global.yml nicht gefunden.")
+        return
+    if not secret_path.exists():
+        print("❌ forwarding.secret nicht gefunden.")
         return
 
     with paper_global_path.open("r") as f:
         config = yaml.safe_load(f)
 
+    with secret_path.open("r") as s:
+        secret_string = s.read().strip()
+
     config['proxies'] = config.get('proxies', {})
     config['proxies']['velocity'] = {
         'enabled': True,
         'online-mode': True,
-        'secret': str(server_dir / "forwarding.secret")
+        'secret': secret_string
     }
 
     with paper_global_path.open("w") as f:
         yaml.dump(config, f)
 
-    print("✅ paper-global.yml angepasst.")
+    print("✅ paper-global.yml korrekt angepasst.")
 
 def find_velocity_server(base_dir: Path) -> Path | None:
     for subdir in base_dir.iterdir():
