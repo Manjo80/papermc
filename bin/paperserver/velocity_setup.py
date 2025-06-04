@@ -1,7 +1,6 @@
 from pathlib import Path
 import shutil
 import yaml
-import toml
 
 def copy_velocity_secret(velocity_dir: Path, paper_server_dir: Path):
     secret_file = velocity_dir / "forwarding.secret"
@@ -49,39 +48,88 @@ def update_paper_global_yml(server_dir: Path):
     print("✅ paper-global.yml angepasst.")
 
 def find_velocity_server(base_dir: Path) -> Path | None:
-    """
-    Sucht im base_dir nach einem Ordner, der mit 'velocity-' beginnt und eine 'velocity.toml' enthält.
-    Gibt den Pfad zurück oder None, falls nichts gefunden wurde.
-    """
     for subdir in base_dir.iterdir():
         if subdir.is_dir() and subdir.name.startswith("velocity-"):
             if (subdir / "velocity.toml").exists():
                 return subdir
     return None
 
-def update_velocity_toml(velocity_dir: Path, server_name: str, server_ip: str, server_port: int, set_forced_host: bool, set_try: bool):
+def update_velocity_toml(
+    velocity_dir: Path,
+    server_name: str,
+    server_ip: str,
+    server_port: int,
+    set_forced_host: bool,
+    set_try: bool
+):
     velocity_config_path = velocity_dir / "velocity.toml"
     if not velocity_config_path.exists():
         print("❌ velocity.toml nicht gefunden.")
         return
 
-    with velocity_config_path.open("r") as f:
-        config = toml.load(f)
+    # Lese Datei als Text
+    with velocity_config_path.open("r", encoding="utf-8") as f:
+        lines = f.readlines()
 
-    config.setdefault('servers', {})[server_name] = f"{server_ip}:{server_port}"
+    # Blocks vorbereiten
+    servers_block = f"{server_name} = \"{server_ip}:{server_port}\"\n"
+    forced_hosts_block = (
+        f"\"{server_name}.example.com\" = [ \"{server_name}\",]\n" if set_forced_host else ""
+    )
+    try_block = f"try = [ \"{server_name}\",]\n" if set_try else ""
 
-    if set_forced_host:
-        config.setdefault('forced-hosts', {})[server_name + ".example.com"] = [server_name]
-    else:
-        config.pop('forced-hosts', None)
+    # Flags und Hilfsvariablen
+    in_servers, in_forced_hosts, in_try = False, False, False
+    new_lines = []
+    servers_written = False
+    forced_hosts_written = False
+    try_written = False
 
-    if set_try:
-        try_list = config.get("try", [])
-        if server_name not in try_list:
-            try_list.append(server_name)
-        config["try"] = try_list
+    for line in lines:
+        # [servers] block
+        if line.strip().startswith("[servers]"):
+            in_servers = True
+            new_lines.append(line)
+            new_lines.append(servers_block)
+            servers_written = True
+            continue
+        if in_servers and (line.strip().startswith("[") and not line.strip().startswith("[servers]")):
+            in_servers = False
 
-    with velocity_config_path.open("w") as f:
-        toml.dump(config, f)
+        if not in_servers or line.strip().startswith("[servers]"):
+            # [forced-hosts] block
+            if line.strip().startswith("[forced-hosts]"):
+                in_forced_hosts = True
+                new_lines.append(line)
+                if set_forced_host:
+                    new_lines.append(forced_hosts_block)
+                    forced_hosts_written = True
+                continue
+            if in_forced_hosts and (line.strip().startswith("[") and not line.strip().startswith("[forced-hosts]")):
+                in_forced_hosts = False
 
-    print("✅ velocity.toml wurde angepasst.")
+            # try block
+            if line.strip().startswith("try"):
+                if set_try:
+                    new_lines.append(try_block)
+                    try_written = True
+                continue
+
+            # Normale Zeile, kein Block
+            if not in_servers and not in_forced_hosts:
+                new_lines.append(line)
+
+    # Falls [servers] noch nicht geschrieben (z.B. nicht vorhanden)
+    if not servers_written:
+        new_lines.append("\n[servers]\n")
+        new_lines.append(servers_block)
+    if set_forced_host and not forced_hosts_written:
+        new_lines.append("\n[forced-hosts]\n")
+        new_lines.append(forced_hosts_block)
+    if set_try and not try_written:
+        new_lines.append(try_block)
+
+    with velocity_config_path.open("w", encoding="utf-8") as f:
+        f.writelines(new_lines)
+
+    print("✅ velocity.toml wurde sicher angepasst (ohne komplette Überschreibung).")
