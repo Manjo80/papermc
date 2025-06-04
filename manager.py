@@ -10,6 +10,7 @@ from velocity.install_velocity_server import main as install_velocity_server
 from uninstall.uninstall_server import main as uninstall_server
 from paperserver.install import main as install
 # from bin.open_rcon_terminal import main as open_rcon_terminal  # optional
+from remote_inst.rinstall import main as install_remote_server
 
 def show_menu():
     while True:
@@ -19,7 +20,8 @@ def show_menu():
         print("2. Velocity Proxy installieren")
         print("3. Bestehenden Server deinstallieren")
         print("4. RCON-Terminal öffnen")
-        print("5. Beenden")
+        print("5. Remote PaperMC Server installieren")
+        print("6. Beenden")
         choice = input("> ")
 
         if choice == "1":
@@ -32,6 +34,8 @@ def show_menu():
             print("❌ RCON-Terminal noch nicht implementiert.")
             input("Weiter mit Enter...")
         elif choice == "5":
+            install_remote_server()
+        elif choice == "6":
             break
         else:
             print("❌ Ungültige Eingabe.")
