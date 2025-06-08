@@ -5,7 +5,6 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "bin"))
 
 # Imports aus den Unterpaketen
-from paper.install_paper_server import main as install_paper_server
 from velocity.install_velocity_server import main as install_velocity_server
 from uninstall.uninstall_server import main as uninstall_server
 from paperserver.install import main as install
