@@ -9,7 +9,7 @@ from velocity.install_velocity_server import main as install_velocity_server
 from uninstall.uninstall_server import main as uninstall_server
 from paperserver.install import main as install
 # from bin.open_rcon_terminal import main as open_rcon_terminal  # optional
-from remote_inst.rinstall import main as install_remote_server
+# from remote_inst.rinstall import main as install_remote_server
 
 def show_menu():
     while True:
