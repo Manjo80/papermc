@@ -32,7 +32,7 @@ def main():
     start_velocity_until_config_created(server_dir)
 
     # Secret erstellen
-    secret_path = copy_forwarding_secret(server_dir)
+    # secret_path = copy_forwarding_secret(server_dir)
 
     # Konfiguration vorbereiten
     apply_velocity_toml(server_dir)
